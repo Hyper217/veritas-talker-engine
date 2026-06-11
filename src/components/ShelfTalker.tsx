@@ -317,7 +317,84 @@ export default function ShelfTalker({ product, settings, forPrint = false, flowD
             <p
               className="font-serif text-[14px] italic leading-snug w-full"
               style={{ color: textColor, textShadow }}
+            >
+              {product.vintage} {product.name}
+            </p>
+          </div>
 
+          {/* Score */}
+          {product.score != null && product.score > 0 && (
+            <div
+              className="absolute flex flex-col items-center justify-center overflow-hidden"
+              style={zoneStyle(zones.score)}
+            >
+              <span className="font-serif text-2xl font-black leading-none" style={{ color: flowAccent, textShadow }}>
+                {product.score}
+              </span>
+              <span className="text-[6px] font-bold uppercase opacity-80" style={{ color: flowAccent }}>
+                {product.reviewer || 'PTS'}
+              </span>
+            </div>
+          )}
+
+          {/* Bottle */}
+          <div
+            className="absolute flex items-end justify-center overflow-hidden"
+            style={zoneStyle(zones.bottle)}
+          >
+            {imageUrl ? (
+              <img
+                src={imageUrl}
+                alt="Bottle"
+                className="max-h-full max-w-full object-contain drop-shadow-md"
+                crossOrigin="anonymous"
+              />
+            ) : null}
+          </div>
+
+          {/* Tasting notes */}
+          <div
+            className="absolute overflow-hidden rounded-sm p-1"
+            style={{
+              ...zoneStyle(zones.description),
+              backgroundColor:
+                panelOpacity > 0 ? hexToRgba(panelColor, panelOpacity / 100) : 'transparent',
+            }}
+          >
+            <AutoSizeText text={product.description} color={textColor} />
+          </div>
+
+          {/* Tags */}
+          <div
+            className="absolute flex items-center justify-center overflow-hidden px-1"
+            style={zoneStyle(zones.tags)}
+          >
+            <p
+              className="text-[8px] font-black uppercase tracking-wider text-center leading-none w-full"
+              style={{ color: flowAccent, textShadow }}
+            >
+              {tags.slice(0, 3).join(tagSep)}
+            </p>
+          </div>
+
+          {/* Logo */}
+          {formattedLogoUrl && (
+            <div
+              className="absolute flex items-center justify-center overflow-hidden"
+              style={zoneStyle(zones.logo)}
+            >
+              <img
+                src={formattedLogoUrl}
+                alt="Logo"
+                className="max-h-full max-w-full object-contain"
+                crossOrigin="anonymous"
+              />
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   if (layout === 'flow-custom') {
     return renderFlowImport();

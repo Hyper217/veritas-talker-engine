@@ -81,6 +81,10 @@ export default function App() {
     const saved = localStorage.getItem('veritas_catalog');
     return saved ? JSON.parse(saved) : [];
   });
+  const [csvImportPending, setCsvImportPending] = useState<{
+    newWines: Product[];
+    duplicateWines: { incoming: Product; existing: Product }[];
+  } | null>(null);
 
   const filteredCatalog = useMemo(() => {
     if (!catalogSearch.trim()) return catalog;
@@ -213,7 +217,7 @@ export default function App() {
       header: true,
       skipEmptyLines: true,
       complete: (results) => {
-        const newItems: Product[] = results.data.map((row: any) => ({
+        const incomingWines: Product[] = results.data.map((row: any) => ({
           id: crypto.randomUUID(),
           producer: row.Producer || row.producer || row['Producer Name'] || '',
           name: row.Name || row.name || row['Bottle Name'] || '',
@@ -227,13 +231,73 @@ export default function App() {
           logoUrl: '',
         }));
 
-        const updatedCatalog = [...catalog, ...newItems];
-        setCatalog(updatedCatalog);
-        localStorage.setItem('veritas_catalog', JSON.stringify(updatedCatalog));
-        showToast(`Imported ${newItems.length} wine${newItems.length === 1 ? '' : 's'} to catalog`);
+        const isMatch = (a: Product, b: Product) =>
+          a.producer.trim().toLowerCase() === b.producer.trim().toLowerCase() &&
+          a.name.trim().toLowerCase() === b.name.trim().toLowerCase() &&
+          a.vintage.trim().toLowerCase() === b.vintage.trim().toLowerCase() &&
+          a.region.trim().toLowerCase() === b.region.trim().toLowerCase();
+
+        const newWines: Product[] = [];
+        const duplicateWines: { incoming: Product; existing: Product }[] = [];
+
+        for (const incoming of incomingWines) {
+          const existing = catalog.find((p) => isMatch(incoming, p));
+          if (existing) {
+            duplicateWines.push({ incoming, existing });
+          } else {
+            newWines.push(incoming);
+          }
+        }
+
+        if (duplicateWines.length === 0) {
+          const updatedCatalog = [...catalog, ...newWines];
+          setCatalog(updatedCatalog);
+          localStorage.setItem('veritas_catalog', JSON.stringify(updatedCatalog));
+          showToast(`Imported ${newWines.length} wine${newWines.length === 1 ? '' : 's'} to catalog`);
+        } else {
+          setCsvImportPending({ newWines, duplicateWines });
+        }
       },
       error: () => showToast('CSV import failed — check file format.', 'error'),
     });
+  };
+
+  const handleMergeImport = () => {
+    if (!csvImportPending) return;
+    const { newWines, duplicateWines } = csvImportPending;
+    const updatedCatalog = catalog.map((item) => {
+      const match = duplicateWines.find((d) => d.existing.id === item.id);
+      if (match) {
+        return { ...match.incoming, id: item.id };
+      }
+      return item;
+    });
+    const finalCatalog = [...updatedCatalog, ...newWines];
+    setCatalog(finalCatalog);
+    localStorage.setItem('veritas_catalog', JSON.stringify(finalCatalog));
+    showToast(`Merged ${duplicateWines.length} and added ${newWines.length} new wine${newWines.length === 1 ? '' : 's'} to catalog`);
+    setCsvImportPending(null);
+  };
+
+  const handleSkipImport = () => {
+    if (!csvImportPending) return;
+    const { newWines } = csvImportPending;
+    const finalCatalog = [...catalog, ...newWines];
+    setCatalog(finalCatalog);
+    localStorage.setItem('veritas_catalog', JSON.stringify(finalCatalog));
+    showToast(`Imported ${newWines.length} new wine${newWines.length === 1 ? '' : 's'} (skipped duplicates)`);
+    setCsvImportPending(null);
+  };
+
+  const handleKeepBothImport = () => {
+    if (!csvImportPending) return;
+    const { newWines, duplicateWines } = csvImportPending;
+    const allIncoming = [...newWines, ...duplicateWines.map((d) => d.incoming)];
+    const finalCatalog = [...catalog, ...allIncoming];
+    setCatalog(finalCatalog);
+    localStorage.setItem('veritas_catalog', JSON.stringify(finalCatalog));
+    showToast(`Imported all ${allIncoming.length} wine${allIncoming.length === 1 ? '' : 's'} (created duplicates)`);
+    setCsvImportPending(null);
   };
 
   const toggleCatalogSelection = (id: string) => {
@@ -1099,6 +1163,95 @@ export default function App() {
                    >
                      Done
                    </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+
+          {csvImportPending && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-8"
+              onClick={() => setCsvImportPending(null)}
+            >
+              <motion.div 
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="bg-white rounded-lg shadow-2xl w-full max-w-lg overflow-hidden border border-violet-100"
+                onClick={e => e.stopPropagation()}
+              >
+                <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-stone-50">
+                  <div className="flex items-center gap-2">
+                    <Database className="w-5 h-5 text-violet-600" />
+                    <h2 className="text-sm font-black uppercase tracking-widest text-gray-900">Duplicate Wines Detected</h2>
+                  </div>
+                  <button onClick={() => setCsvImportPending(null)} className="text-gray-400 hover:text-black">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                
+                <div className="p-6 space-y-4 max-h-[380px] overflow-y-auto custom-scrollbar">
+                  <p className="text-xs text-stone-600 leading-relaxed">
+                    We found <strong>{csvImportPending.duplicateWines.length} duplicate</strong> wine(s) in your CSV that already exist in your catalog.
+                  </p>
+                  
+                  <div className="space-y-2.5">
+                    <span className="text-[9px] uppercase tracking-wider font-bold text-stone-400">Conflict Examples (Incoming vs Catalog)</span>
+                    {csvImportPending.duplicateWines.slice(0, 3).map((item, idx) => (
+                      <div key={idx} className="p-3 bg-stone-50 rounded border border-stone-100 flex flex-col gap-1 text-[11px]">
+                        <div className="flex justify-between font-semibold">
+                          <span className="text-violet-600 uppercase font-bold">Incoming Row:</span>
+                          <span className="text-stone-700 font-serif italic">{item.incoming.producer} {item.incoming.name} ({item.incoming.vintage})</span>
+                        </div>
+                        <div className="flex justify-between font-semibold">
+                          <span className="text-stone-700 uppercase font-bold">In Catalog:</span>
+                          <span className="text-stone-700 font-serif italic">{item.existing.producer} {item.existing.name} ({item.existing.vintage})</span>
+                        </div>
+                      </div>
+                    ))}
+                    {csvImportPending.duplicateWines.length > 3 && (
+                      <p className="text-[10px] text-stone-400 italic text-right">+ {csvImportPending.duplicateWines.length - 3} more duplicates</p>
+                    )}
+                  </div>
+                  
+                  <div className="bg-amber-50 border border-amber-200 rounded p-3 text-[11px] text-amber-800 leading-relaxed">
+                    <strong>Please select how to resolve these duplicates:</strong>
+                    <ul className="list-disc list-inside mt-1.5 space-y-1">
+                      <li><strong>Merge / Overwrite:</strong> Overwrites current catalog wine details with the CSV row content.</li>
+                      <li><strong>Skip Duplicates:</strong> Keeps existing catalog records; only imports completely new wines.</li>
+                      <li><strong>Keep Both:</strong> Imports all rows as new catalog entries (will create duplicate products).</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="bg-stone-50 p-6 border-t border-gray-100 flex flex-wrap gap-2 justify-end">
+                  <button 
+                    onClick={() => setCsvImportPending(null)}
+                    className="px-4 py-2 border border-stone-200 text-stone-600 text-[10px] font-bold uppercase tracking-widest rounded hover:bg-stone-100 transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={handleKeepBothImport}
+                    className="px-4 py-2 bg-stone-800 text-white text-[10px] font-bold uppercase tracking-widest rounded hover:bg-stone-900 transition-all"
+                  >
+                    Keep Both
+                  </button>
+                  <button 
+                    onClick={handleSkipImport}
+                    className="px-4 py-2 bg-violet-600 text-white text-[10px] font-bold uppercase tracking-widest rounded hover:bg-violet-700 transition-all shadow-md"
+                  >
+                    Skip Duplicates
+                  </button>
+                  <button 
+                    onClick={handleMergeImport}
+                    className="px-4 py-2 bg-vibrant-blue text-white text-[10px] font-bold uppercase tracking-widest rounded hover:bg-blue-800 transition-all shadow-md"
+                  >
+                    Merge & Update
+                  </button>
                 </div>
               </motion.div>
             </motion.div>
