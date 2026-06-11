@@ -42,6 +42,9 @@ export interface FlowDesignLayout {
   /** 0 = transparent tasting-note panel */
   descriptionPanelOpacity?: number;
   tagSeparator?: string;
+  textShadowColor?: string;
+  textShadowBlur?: number;
+  descriptionPanelColor?: string;
 }
 
 export interface FlowDesign {

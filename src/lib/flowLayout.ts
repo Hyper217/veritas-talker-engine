@@ -5,6 +5,9 @@ export const DEFAULT_FLOW_LAYOUT: FlowDesignLayout = {
   textOnDark: false,
   descriptionPanelOpacity: 70,
   tagSeparator: ' ',
+  textShadowColor: 'rgba(255,255,255,0.9)',
+  textShadowBlur: 4,
+  descriptionPanelColor: '#ffffff',
   zones: {
     region: { top: 4, left: 5, width: 58, height: 4 },
     producer: { top: 9, left: 5, width: 52, height: 7 },
@@ -23,6 +26,9 @@ export const ART_DECO_FLOW_LAYOUT: FlowDesignLayout = {
   textOnDark: true,
   descriptionPanelOpacity: 0,
   tagSeparator: ' · ',
+  textShadowColor: 'rgba(0,0,0,0.85)',
+  textShadowBlur: 8,
+  descriptionPanelColor: '#ffffff',
   zones: {
     region: { top: 3, left: 5, width: 32, height: 4.5 },
     producer: { top: 8.5, left: 5, width: 50, height: 7 },

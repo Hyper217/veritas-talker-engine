@@ -69,22 +69,57 @@ export default function FlowLayoutEditor({ design, onUpdate }: Props) {
         Light text on dark background
       </label>
 
-      <label className="block space-y-1">
-        <span className="text-[8px] uppercase text-stone-400 font-bold">
-          Notes panel opacity ({layout.descriptionPanelOpacity ?? 0}%)
-        </span>
-        <input
-          type="range"
-          min={0}
-          max={100}
-          value={layout.descriptionPanelOpacity ?? 0}
-          onChange={(e) =>
-            setLayout({ ...layout, descriptionPanelOpacity: Number(e.target.value) })
-          }
-          className="w-full"
-        />
-        <span className="text-[8px] text-stone-400">Set to 0 if your Flow art has its own text area</span>
-      </label>
+      <div className="grid grid-cols-2 gap-2">
+        <label className="space-y-1 block">
+          <span className="text-[8px] uppercase text-stone-400 font-bold">Shadow Blur ({layout.textShadowBlur ?? 0}px)</span>
+          <input
+            type="range"
+            min={0}
+            max={20}
+            step={1}
+            value={layout.textShadowBlur ?? 0}
+            onChange={(e) => setLayout({ ...layout, textShadowBlur: Number(e.target.value) })}
+            className="w-full h-8"
+          />
+        </label>
+        <label className="space-y-1 block">
+          <span className="text-[8px] uppercase text-stone-400 font-bold">Shadow Color</span>
+          <input
+            type="color"
+            value={layout.textShadowColor?.startsWith('rgba') ? '#000000' : (layout.textShadowColor ?? '#000000')}
+            onChange={(e) => setLayout({ ...layout, textShadowColor: e.target.value })}
+            className="w-full h-8 rounded border border-stone-200 cursor-pointer"
+          />
+        </label>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <label className="block space-y-1">
+          <span className="text-[8px] uppercase text-stone-400 font-bold">
+            Notes Opacity ({layout.descriptionPanelOpacity ?? 0}%)
+          </span>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            value={layout.descriptionPanelOpacity ?? 0}
+            onChange={(e) =>
+              setLayout({ ...layout, descriptionPanelOpacity: Number(e.target.value) })
+            }
+            className="w-full"
+          />
+        </label>
+        <label className="space-y-1 block">
+          <span className="text-[8px] uppercase text-stone-400 font-bold">Notes Panel Color</span>
+          <input
+            type="color"
+            value={layout.descriptionPanelColor ?? '#ffffff'}
+            onChange={(e) => setLayout({ ...layout, descriptionPanelColor: e.target.value })}
+            className="w-full h-8 rounded border border-stone-200 cursor-pointer"
+          />
+        </label>
+      </div>
+      <p className="text-[8px] text-stone-400 italic">Set opacity to 0 if your Flow art has its own text area</p>
 
       <details className="text-[9px]">
         <summary className="cursor-pointer font-bold uppercase tracking-wider text-stone-400 hover:text-violet-600">

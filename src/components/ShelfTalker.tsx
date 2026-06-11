@@ -71,6 +71,19 @@ function NoirAutoSizeText({ text, accentColor }: { text: string; accentColor: st
   );
 }
 
+function hexToRgba(hex: string, alpha: number): string {
+  let cleanHex = hex.replace('#', '');
+  if (cleanHex.length === 3) {
+    cleanHex = cleanHex.split('').map((char) => char + char).join('');
+  }
+  if (cleanHex.length !== 6) return `rgba(255, 255, 255, ${alpha})`;
+  const num = parseInt(cleanHex, 16);
+  const r = (num >> 16) & 255;
+  const g = (num >> 8) & 255;
+  const b = num & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 export default function ShelfTalker({ product, settings, forPrint = false, flowDesign }: Props) {
   const imageUrl = formatDropboxUrl(product.dropboxImageUrl);
   const logoUrl = product.logoUrl || settings?.defaultLogoUrl;
@@ -117,22 +130,22 @@ export default function ShelfTalker({ product, settings, forPrint = false, flowD
         </div>
       </header>
 
-      <div className="flex-1 px-8 py-4 flex flex-col relative">
+      <div className="flex-1 px-8 py-3 flex flex-col relative">
         <div className="flex flex-1 gap-2 items-center relative">
           <div className="flex-1 flex flex-col items-center justify-center">
             <div
-              className="w-[160px] h-[220px] rounded-t-[80px] border-2 flex items-center justify-center bg-black/40 relative"
+              className="w-[140px] h-[185px] rounded-t-[70px] border-2 flex items-center justify-center bg-black/40 relative"
               style={{ borderColor: `${accentColor}99`, boxShadow: `0 0 20px ${accentColor}1A` }}
             >
               <div
-                className="absolute inset-0 rounded-t-[80px] border pointer-events-none"
+                className="absolute inset-0 rounded-t-[70px] border pointer-events-none"
                 style={{ borderColor: `${accentColor}33` }}
               />
               {imageUrl ? (
                 <img
                   src={imageUrl}
                   alt="Bottle"
-                  className="h-[85%] object-contain filter brightness-[1.1] contrast-[1.1]"
+                  className="h-[90%] object-contain filter brightness-[1.1] contrast-[1.1]"
                   crossOrigin="anonymous"
                 />
               ) : (
@@ -160,9 +173,7 @@ export default function ShelfTalker({ product, settings, forPrint = false, flowD
                 <span
                   className="text-[72px] font-black leading-none drop-shadow-[0_4px_10px_rgba(0,0,0,0.8)]"
                   style={{
-                    background: `linear-gradient(to bottom, ${accentColor}, ${accentColor}CC)`,
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
+                    color: accentColor,
                   }}
                 >
                   {product.score}
@@ -178,13 +189,13 @@ export default function ShelfTalker({ product, settings, forPrint = false, flowD
           )}
         </div>
 
-        <div className="text-center mt-4">
-          <h2 className="font-serif text-[38px] text-white font-medium leading-none tracking-tight">
+        <div className="text-center mt-3">
+          <h2 className="font-serif text-[32px] text-white font-medium leading-none tracking-tight">
             {product.vintage} {product.name.split("'")[0].trim() || 'Variety'}
           </h2>
           {product.name.includes("'") && (
             <p
-              className="font-serif italic text-[22px] leading-none mt-2"
+              className="font-serif italic text-[18px] leading-none mt-1.5"
               style={{ color: `${accentColor}E6` }}
             >
               '{product.name.split("'")[1].replace("'", "").trim()}'
@@ -192,7 +203,7 @@ export default function ShelfTalker({ product, settings, forPrint = false, flowD
           )}
 
           <div
-            className="flex items-center gap-2 justify-center mt-5 text-[11px] font-black uppercase tracking-[0.2em]"
+            className="flex items-center gap-2 justify-center mt-4 text-[10px] font-black uppercase tracking-[0.2em]"
             style={{ color: `${accentColor}B3` }}
           >
             <span>{product.region?.split(',')[0].trim() || 'REGION'}</span>
@@ -237,10 +248,15 @@ export default function ShelfTalker({ product, settings, forPrint = false, flowD
     const { zones } = flowLayout;
     const textColor = flowDesign?.textColor ?? (flowLayout.textOnDark ? '#D4AF37' : '#111827');
     const flowAccent = flowDesign?.accentColor ?? textColor;
-    const textShadow = flowLayout.textOnDark
-      ? '0 1px 4px rgba(0,0,0,0.85), 0 0 12px rgba(0,0,0,0.5)'
-      : '0 1px 3px rgba(255,255,255,0.9), 0 0 8px rgba(255,255,255,0.6)';
+
+    const shadowColor = flowLayout.textShadowColor ?? (flowLayout.textOnDark ? 'rgba(0,0,0,0.85)' : 'rgba(255,255,255,0.9)');
+    const shadowBlur = flowLayout.textShadowBlur ?? (flowLayout.textOnDark ? 8 : 4);
+    const textShadow = shadowBlur > 0
+      ? `0 1px ${shadowBlur}px ${shadowColor}, 0 0 ${shadowBlur * 2}px ${shadowColor}`
+      : 'none';
+
     const panelOpacity = flowLayout.descriptionPanelOpacity ?? 0;
+    const panelColor = flowLayout.descriptionPanelColor ?? '#ffffff';
     const tagSep = flowLayout.tagSeparator ?? ' ';
 
     const tags =
@@ -301,84 +317,7 @@ export default function ShelfTalker({ product, settings, forPrint = false, flowD
             <p
               className="font-serif text-[14px] italic leading-snug w-full"
               style={{ color: textColor, textShadow }}
-            >
-              {product.name || 'Wine Name'} · {product.vintage}
-            </p>
-          </div>
 
-          {/* Score */}
-          {product.score != null && product.score > 0 && (
-            <div
-              className="absolute flex flex-col items-center justify-center overflow-hidden"
-              style={zoneStyle(zones.score)}
-            >
-              <span className="font-serif text-2xl font-black leading-none" style={{ color: flowAccent, textShadow }}>
-                {product.score}
-              </span>
-              <span className="text-[6px] font-bold uppercase opacity-80" style={{ color: flowAccent }}>
-                {product.reviewer || 'PTS'}
-              </span>
-            </div>
-          )}
-
-          {/* Bottle */}
-          <div
-            className="absolute flex items-end justify-center overflow-hidden"
-            style={zoneStyle(zones.bottle)}
-          >
-            {imageUrl ? (
-              <img
-                src={imageUrl}
-                alt="Bottle"
-                className="max-h-full max-w-full object-contain drop-shadow-md"
-                crossOrigin="anonymous"
-              />
-            ) : null}
-          </div>
-
-          {/* Tasting notes */}
-          <div
-            className="absolute overflow-hidden rounded-sm p-1"
-            style={{
-              ...zoneStyle(zones.description),
-              backgroundColor:
-                panelOpacity > 0 ? `rgba(255,255,255,${panelOpacity / 100})` : 'transparent',
-            }}
-          >
-            <AutoSizeText text={product.description} color={textColor} />
-          </div>
-
-          {/* Tags */}
-          <div
-            className="absolute flex items-center justify-center overflow-hidden px-1"
-            style={zoneStyle(zones.tags)}
-          >
-            <p
-              className="text-[8px] font-black uppercase tracking-wider text-center leading-none w-full"
-              style={{ color: flowAccent, textShadow }}
-            >
-              {tags.slice(0, 3).join(tagSep)}
-            </p>
-          </div>
-
-          {/* Logo */}
-          {formattedLogoUrl && (
-            <div
-              className="absolute flex items-center justify-center overflow-hidden"
-              style={zoneStyle(zones.logo)}
-            >
-              <img
-                src={formattedLogoUrl}
-                alt="Logo"
-                className="max-h-full max-w-full object-contain"
-                crossOrigin="anonymous"
-              />
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
 
   if (layout === 'flow-custom') {
     return renderFlowImport();
