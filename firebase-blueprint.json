@@ -1,0 +1,30 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "A wine or liquor product record used for shelf talker generation",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier" },
+        "producer": { "type": "string", "description": "Name of the producer" },
+        "name": { "type": "string", "description": "Name of the wine or liquor" },
+        "vintage": { "type": "string", "description": "Year of production" },
+        "region": { "type": "string", "description": "Origin region" },
+        "score": { "type": "number", "description": "Numeric score" },
+        "reviewer": { "type": "string", "description": "Name of the reviewer/publication" },
+        "description": { "type": "string", "description": "Tasting notes and description" },
+        "tags": { "type": "array", "items": { "type": "string" }, "description": "Metadata tags" },
+        "dropboxImageUrl": { "type": "string", "description": "URL to the bottle image" },
+        "logoUrl": { "type": "string", "description": "URL to a custom logo override" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "producer", "name"]
+    }
+  },
+  "firestore": {
+    "catalog": {
+      "schema": "Product",
+      "description": "Collection of all wine and liquor products in the catalog"
+    }
+  }
+}

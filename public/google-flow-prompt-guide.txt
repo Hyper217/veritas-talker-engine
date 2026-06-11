@@ -1,0 +1,199 @@
+================================================================================
+  VERITAS TALKER ENGINE — GOOGLE FLOW PROMPT GUIDE
+  https://labs.google/fx/tools/flow
+================================================================================
+
+WHAT THIS IS FOR
+----------------
+You design shelf talker ARTWORK in Google Flow (any visual style).
+You export a PNG and import it into Veritas Talker Engine.
+The app places wine data ON TOP of your artwork at print time.
+
+Your Flow design does NOT need to be noir/black & gold.
+Rustic, minimal, colorful, seasonal, luxury — all work.
+
+
+GOOGLE FLOW ASPECT RATIOS (WHAT YOU ACTUALLY HAVE)
+--------------------------------------------------
+In Nano Banana 2, Flow only offers these ratios:
+
+  16:9   4:3   1:1   3:4   9:16
+  ────   ───   ───   ───   ────
+  wide   wide  sq.   PORT  tall phone
+
+  ✓ USE THIS ONE →  3:4  (portrait, middle-right icon)
+
+  ✗ Do NOT use 9:16 — too tall and narrow; Veritas will crop heavily.
+  ✗ Do NOT use 1:1, 4:3, or 16:9 — landscape or square; wrong shape.
+
+WHY 3:4?
+  Veritas shelf talkers print at 4" wide × ~5.3" tall.
+  That is almost exactly a 3:4 image ratio (0.75 vs 0.753).
+  Flow does not offer 4:5 — 3:4 is the closest match and needs minimal crop.
+
+
+PRINT & PIXEL SIZE
+------------------
+  In Google Flow     : 3:4 portrait
+  Recommended pixels : 768 × 1024 (or upscale to 2K in Flow if available)
+  Physical print     : 4" × ~5.3" per talker (Veritas handles this)
+  PDF layout         : 4 talkers per US Letter sheet (2×2 grid)
+
+
+WHERE VERITAS PLACES WINE DATA (DESIGN AROUND THESE ZONES)
+----------------------------------------------------------
+Your PNG is the full background. The app overlays:
+
+  ┌────────────────────────────────────┐  TOP ~15%
+  │  REGION (small, upper left)        │  SCORE badge (upper right, if scored)
+  │  PRODUCER NAME (large, bold)       │
+  │  Wine Name · Vintage (italic)      │
+  ├──────────────────┬─────────────────┤  MIDDLE ~55%
+  │                  │                 │
+  │   BOTTLE PHOTO   │  TASTING NOTES  │
+  │   (left ~38%)    │  (right panel,  │
+  │   lower area)    │   semi-white)   │
+  │                  │                 │
+  ├──────────────────┴─────────────────┤  BOTTOM ~15%
+  │  TAGS (up to 3)          LOGO      │
+  └────────────────────────────────────┘
+
+DESIGN TIPS
+  • Leave these zones relatively open — avoid busy patterns behind text.
+  • Do NOT bake in specific wine names, scores, or tasting notes.
+  • Decorative borders, textures, and color anywhere else are great.
+  • A subtle lighter area on the right-middle helps tasting notes read well.
+
+
+MASTER PROMPT (COPY & CUSTOMIZE)
+--------------------------------
+Set aspect ratio to 3:4 in Flow first, then paste:
+
+  Wine retail shelf talker background template, portrait 3:4 aspect ratio,
+  flat print-ready design, no mockup perspective, no 3D shelf scene.
+  Decorative border and header zone at top. Open lower-left area for a wine
+  bottle photograph. Open right side for tasting note text. Footer strip for
+  small tags. NO readable text, NO wine bottle, NO specific brand names.
+  [DESCRIBE YOUR STYLE HERE: colors, mood, season, texture, era]
+
+
+NEGATIVE PROMPT (ADD IF FLOW SUPPORTS IT)
+---------------------------------------
+  readable text, wine bottle, label text, logo, watermark, perspective mockup,
+  hands, people, blurry, low resolution, cropped edges
+
+
+STYLE PROMPTS — READY TO USE
+----------------------------
+(Set 3:4 portrait in Flow before each prompt)
+
+1) NOIR / LUXURY (black & gold)
+  Wine shelf talker background, 3:4 portrait. Deep black background with
+  subtle radial glow. Gold (#D4AF37) line accents and thin borders. Empty
+  arched frame lower-left for bottle. Open right panel for text. Footer band
+  for tags. Art deco luxury wine retail. No text, no bottle.
+
+2) MINIMAL EDITORIAL (white & black)
+  Minimal wine shelf talker template, 3:4 portrait. Clean white background,
+  thin black rules and margins. Generous whitespace upper third. Empty
+  rectangle lower-left for bottle. Open right column for notes. Small footer
+  for tags. Swiss editorial feel without any readable words.
+
+3) RUSTIC NATURAL (kraft & green)
+  Organic natural wine shelf talker, 3:4 portrait. Kraft paper texture,
+  muted sage green and warm brown accents. Hand-drawn vine or leaf border
+  elements only. Empty bottle zone lower-left. Soft empty panel right for
+  text. Earthy unfiltered wine aesthetic. No text, no bottle.
+
+4) BOLD RETAIL (high contrast)
+  Bold retail wine shelf talker, 3:4 portrait. High contrast geometric
+  shapes, strong color blocks (pick 2-3 colors). Modern liquor store energy.
+  Clear empty zones: top header, lower-left bottle, right text panel, bottom
+  tags. No readable text, no bottle, flat graphic design.
+
+5) BURGUNDY HERITAGE (classic wine shop)
+  Classic heritage wine shelf talker, 3:4 portrait. Deep burgundy header band,
+  cream parchment body, subtle grain texture. Ornate but restrained border.
+  Empty zones for bottle and notes. Old world cellar aesthetic. No text.
+
+6) MODERN BOTANICAL (light & fresh)
+  Modern botanical wine shelf talker, 3:4 portrait. Soft off-white background,
+  muted emerald green accents, delicate botanical line art in corners only.
+  Airy open center-left for bottle. Light open right area for text. Fresh
+  natural wine vibe. No text, no bottle.
+
+7) HOLIDAY / SEASONAL (winter)
+  Seasonal winter wine shelf talker background, 3:4 portrait. Deep navy and
+  silver accents, subtle snowflake or holly border motifs in corners only.
+  Open central zones for bottle and text. Festive but elegant. No text.
+
+8) HOLIDAY / SEASONAL (autumn)
+  Autumn harvest wine shelf talker, 3:4 portrait. Warm ochre, rust, and
+  burgundy palette. Leaf border elements. Open lower-left bottle zone and
+  right text panel. Cozy fall wine shop mood. No text, no bottle.
+
+
+EXPORT FROM GOOGLE FLOW
+-----------------------
+  1. Open https://labs.google/fx/tools/flow
+  2. Select aspect ratio: 3:4 (NOT 9:16)
+  3. Model: Nano Banana 2 (or latest image model)
+  4. Generate or edit your image
+  5. Upscale to 2K if available (sharper print)
+  6. Download as PNG
+  7. Name clearly (e.g. holiday-2026-shelf-talker.png)
+
+
+IMPORT INTO VERITAS
+-------------------
+  1. Run the app → Sparkles icon (Imported Designs) in left sidebar
+  2. Click "Import from Google Flow (PNG/JPG)"
+  3. Select your PNG
+  4. Click the design thumbnail to activate it
+  5. Tune colors for that design:
+       • Main text  — producer, wine name, region, tasting notes
+       • Accent     — score, tags
+  6. Add wines → queue → Generate Print PDF
+
+
+QUICK COLOR GUIDE AFTER IMPORT
+------------------------------
+  Background is...          Main text      Accent
+  ─────────────────────────────────────────────────
+  White / cream           #111827        #4A1515 or brand color
+  Black / dark navy       #F5F5F5        #D4AF37 (gold)
+  Kraft / mid-tone        #1a1a1a        #2d5016 or #4A1515
+  Bold / colorful         #111827        Color from your design
+
+
+WHAT NOT TO PUT IN YOUR FLOW DESIGN
+-----------------------------------
+  ✗ Specific producer or wine names
+  ✗ Point scores or reviewer names
+  ✗ Tasting note paragraphs
+  ✗ A wine bottle (Veritas adds it per wine)
+  ✗ Perspective mockups (flat 3:4 only)
+
+
+TROUBLESHOOTING
+---------------
+  Used 9:16 by mistake?
+    → Artwork will be cropped on the sides. Re-export at 3:4.
+
+  Text hard to read?
+    → Adjust Main text / Accent in the import panel
+    → Redesign with more open space in text zones
+
+  PDF looks stretched?
+    → Re-export at 3:4 portrait in Flow
+
+  Design looks wrong in Cursor browser?
+    → Test in Chrome (more reliable for this app)
+
+
+WORKFLOW SUMMARY
+----------------
+  Google Flow (3:4 portrait, any style) → Export PNG → Veritas import →
+  Pick colors → Add wines → Print PDF (4 per sheet)
+
+================================================================================
