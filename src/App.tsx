@@ -1,16 +1,12 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Plus, Printer, Trash2, Download, Wine, LayoutGrid, Settings as SettingsIcon, X, Search, Upload, FileSpreadsheet, Database, Gem, CheckSquare, Square, FileDown, Sparkles } from 'lucide-react';
+import { Plus, Printer, Trash2, Download, Wine, LayoutGrid, Settings as SettingsIcon, X, Search, Gem, CheckSquare, Square, Database } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import Papa from 'papaparse';
-import { Product, AppSettings, FlowDesign } from './types';
+import { Product, AppSettings } from './types';
 import ShelfTalker from './components/ShelfTalker';
 import RichTextEditor from './components/RichTextEditor';
-import FlowDesignPanel from './components/FlowDesignPanel';
 import Toast, { ToastMessage } from './components/Toast';
 import { formatDropboxUrl } from './lib/utils';
 import { getTalkerDimensions } from './lib/talkerDimensions';
-import { layoutForNewImport } from './lib/flowLayout';
-import { buildBackup, downloadBackup, parseBackup } from './lib/dataBackup';
 import {
   buildPdfFromCanvases,
   captureTalkerElement,
@@ -27,13 +23,14 @@ const INITIAL_SETTINGS: AppSettings = {
 };
 
 function migrateSettings(raw: Partial<AppSettings>): AppSettings {
-  const layout = raw.designLayout === 'flow-custom' ? 'flow-custom' : 'royal-dark';
+  const layout = ((raw.designLayout as any) === 'flow-custom' || raw.designLayout === 'flow-art-deco') 
+    ? 'flow-art-deco' 
+    : 'royal-dark';
   return {
     defaultLogoUrl: raw.defaultLogoUrl ?? '',
     defaultTags: raw.defaultTags ?? INITIAL_SETTINGS.defaultTags,
     designLayout: layout,
     royalDarkColor: raw.royalDarkColor ?? '#D4AF37',
-    activeFlowDesignId: raw.activeFlowDesignId,
   };
 }
 
@@ -60,11 +57,6 @@ export default function App() {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [selectedCatalogIds, setSelectedCatalogIds] = useState<Set<string>>(new Set());
   const [catalogSelectMode, setCatalogSelectMode] = useState(false);
-  const [showFlowDesigns, setShowFlowDesigns] = useState(false);
-  const [flowDesigns, setFlowDesigns] = useState<FlowDesign[]>(() => {
-    const saved = localStorage.getItem('veritas_flow_designs');
-    return saved ? JSON.parse(saved) : [];
-  });
 
   const [settings, setSettings] = useState<AppSettings>(() => {
     const saved = localStorage.getItem('veritas_settings');
@@ -82,10 +74,6 @@ export default function App() {
     const saved = localStorage.getItem('veritas_catalog');
     return saved ? JSON.parse(saved) : [];
   });
-  const [csvImportPending, setCsvImportPending] = useState<{
-    newWines: Product[];
-    duplicateWines: { incoming: Product; existing: Product }[];
-  } | null>(null);
 
   const filteredCatalog = useMemo(() => {
     if (!catalogSearch.trim()) return catalog;
@@ -97,10 +85,7 @@ export default function App() {
     );
   }, [catalog, catalogSearch]);
 
-  const activeFlowDesign = useMemo(
-    () => flowDesigns.find((d) => d.id === settings.activeFlowDesignId) ?? flowDesigns[0] ?? null,
-    [flowDesigns, settings.activeFlowDesignId]
-  );
+
 
   useEffect(() => {
     if (settings.defaultTags.length > 0 && product.tags.length === 0 && tagInput === '') {
@@ -213,94 +198,6 @@ export default function App() {
     }
   };
 
-  const handleCsvUpload = (file: File) => {
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: (results) => {
-        const incomingWines: Product[] = results.data.map((row: any) => ({
-          id: crypto.randomUUID(),
-          producer: row.Producer || row.producer || row['Producer Name'] || '',
-          name: row.Name || row.name || row['Bottle Name'] || '',
-          vintage: row.Vintage || row.vintage || row.Year || '',
-          region: row.Region || row.region || '',
-          score: row.Score || row.score ? Number(row.Score || row.score) : null,
-          reviewer: row.Reviewer || row.reviewer || 'PTS',
-          description: row.Description || row.description || row['Tasting Notes'] || '',
-          tags: (row.Tags || row.tags || '').split(',').map((t: string) => t.trim()).filter(Boolean),
-          dropboxImageUrl: row['Image Link'] || row.imageUrl || '',
-          logoUrl: '',
-        }));
-
-        const isMatch = (a: Product, b: Product) =>
-          a.producer.trim().toLowerCase() === b.producer.trim().toLowerCase() &&
-          a.name.trim().toLowerCase() === b.name.trim().toLowerCase() &&
-          a.vintage.trim().toLowerCase() === b.vintage.trim().toLowerCase() &&
-          a.region.trim().toLowerCase() === b.region.trim().toLowerCase();
-
-        const newWines: Product[] = [];
-        const duplicateWines: { incoming: Product; existing: Product }[] = [];
-
-        for (const incoming of incomingWines) {
-          const existing = catalog.find((p) => isMatch(incoming, p));
-          if (existing) {
-            duplicateWines.push({ incoming, existing });
-          } else {
-            newWines.push(incoming);
-          }
-        }
-
-        if (duplicateWines.length === 0) {
-          const updatedCatalog = [...catalog, ...newWines];
-          setCatalog(updatedCatalog);
-          localStorage.setItem('veritas_catalog', JSON.stringify(updatedCatalog));
-          showToast(`Imported ${newWines.length} wine${newWines.length === 1 ? '' : 's'} to catalog`);
-        } else {
-          setCsvImportPending({ newWines, duplicateWines });
-        }
-      },
-      error: () => showToast('CSV import failed — check file format.', 'error'),
-    });
-  };
-
-  const handleMergeImport = () => {
-    if (!csvImportPending) return;
-    const { newWines, duplicateWines } = csvImportPending;
-    const updatedCatalog = catalog.map((item) => {
-      const match = duplicateWines.find((d) => d.existing.id === item.id);
-      if (match) {
-        return { ...match.incoming, id: item.id };
-      }
-      return item;
-    });
-    const finalCatalog = [...updatedCatalog, ...newWines];
-    setCatalog(finalCatalog);
-    localStorage.setItem('veritas_catalog', JSON.stringify(finalCatalog));
-    showToast(`Merged ${duplicateWines.length} and added ${newWines.length} new wine${newWines.length === 1 ? '' : 's'} to catalog`);
-    setCsvImportPending(null);
-  };
-
-  const handleSkipImport = () => {
-    if (!csvImportPending) return;
-    const { newWines } = csvImportPending;
-    const finalCatalog = [...catalog, ...newWines];
-    setCatalog(finalCatalog);
-    localStorage.setItem('veritas_catalog', JSON.stringify(finalCatalog));
-    showToast(`Imported ${newWines.length} new wine${newWines.length === 1 ? '' : 's'} (skipped duplicates)`);
-    setCsvImportPending(null);
-  };
-
-  const handleKeepBothImport = () => {
-    if (!csvImportPending) return;
-    const { newWines, duplicateWines } = csvImportPending;
-    const allIncoming = [...newWines, ...duplicateWines.map((d) => d.incoming)];
-    const finalCatalog = [...catalog, ...allIncoming];
-    setCatalog(finalCatalog);
-    localStorage.setItem('veritas_catalog', JSON.stringify(finalCatalog));
-    showToast(`Imported all ${allIncoming.length} wine${allIncoming.length === 1 ? '' : 's'} (created duplicates)`);
-    setCsvImportPending(null);
-  };
-
   const toggleCatalogSelection = (id: string) => {
     setSelectedCatalogIds((prev) => {
       const next = new Set(prev);
@@ -320,79 +217,6 @@ export default function App() {
     setSelectedCatalogIds(new Set());
     setCatalogSelectMode(false);
     showToast(`Added ${selected.length} wine${selected.length === 1 ? '' : 's'} to print queue`);
-  };
-
-  const handleImportFlowDesign = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const imageUrl = event.target?.result as string;
-      const design: FlowDesign = {
-        id: crypto.randomUUID(),
-        name: file.name.replace(/\.[^.]+$/, ''),
-        imageUrl,
-        createdAt: new Date().toISOString(),
-        ...layoutForNewImport(),
-      };
-      const updated = [...flowDesigns, design];
-      setFlowDesigns(updated);
-      localStorage.setItem('veritas_flow_designs', JSON.stringify(updated));
-      handleSaveSettings({ ...settings, designLayout: 'flow-custom', activeFlowDesignId: design.id });
-      showToast(`Imported "${design.name}" from Google Flow`);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleSelectFlowDesign = (id: string) => {
-    handleSaveSettings({ ...settings, activeFlowDesignId: id });
-  };
-
-  const handleUpdateFlowDesign = (id: string, updates: Partial<FlowDesign>) => {
-    const updated = flowDesigns.map((d) => (d.id === id ? { ...d, ...updates } : d));
-    setFlowDesigns(updated);
-    localStorage.setItem('veritas_flow_designs', JSON.stringify(updated));
-  };
-
-  const handleDeleteFlowDesign = (id: string) => {
-    const updated = flowDesigns.filter((d) => d.id !== id);
-    setFlowDesigns(updated);
-    localStorage.setItem('veritas_flow_designs', JSON.stringify(updated));
-    if (settings.activeFlowDesignId === id) {
-      handleSaveSettings({
-        ...settings,
-        activeFlowDesignId: updated[0]?.id,
-        designLayout: updated.length === 0 && settings.designLayout === 'flow-custom' ? 'royal-dark' : settings.designLayout,
-      });
-    }
-    showToast('Flow design removed');
-  };
-
-  const handleExportBackup = () => {
-    downloadBackup(buildBackup(catalog, settings, flowDesigns, sessions));
-    showToast('Workspace backup downloaded');
-  };
-
-  const handleImportBackup = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const backup = parseBackup(event.target?.result as string);
-        if (!confirm('Restore backup? This replaces your current catalog, designs, settings, and saved batches.')) {
-          return;
-        }
-        setCatalog(backup.catalog);
-        setFlowDesigns(backup.flowDesigns);
-        setSessions(backup.sessions);
-        setSettings(backup.settings);
-        localStorage.setItem('veritas_catalog', JSON.stringify(backup.catalog));
-        localStorage.setItem('veritas_flow_designs', JSON.stringify(backup.flowDesigns));
-        localStorage.setItem('veritas_sessions', JSON.stringify(backup.sessions));
-        localStorage.setItem('veritas_settings', JSON.stringify(backup.settings));
-        showToast('Workspace restored from backup');
-      } catch (error) {
-        showToast(error instanceof Error ? error.message : 'Invalid backup file', 'error');
-      }
-    };
-    reader.readAsText(file);
   };
 
   const addToCatalog = () => {
@@ -421,7 +245,7 @@ export default function App() {
         
         <div className="flex flex-col gap-4 flex-1 items-center w-full">
           <button 
-            onClick={() => { setShowSettings(false); setShowCatalog(!showCatalog); setShowFlowDesigns(false); }}
+            onClick={() => { setShowSettings(false); setShowCatalog(!showCatalog); }}
             title="Wine Catalog"
             className={`w-12 h-12 rounded-full flex items-center justify-center transition-all shrink-0 relative z-10 ${showCatalog ? 'bg-vibrant-blue text-white shadow-xl scale-110' : 'text-white/60 hover:text-white hover:bg-white/10'}`}
           >
@@ -429,15 +253,7 @@ export default function App() {
           </button>
 
           <button 
-            onClick={() => { setShowCatalog(false); setShowFlowDesigns(!showFlowDesigns); setShowSettings(false); }}
-            title="Google Flow Designs"
-            className={`w-12 h-12 rounded-full flex items-center justify-center transition-all shrink-0 relative z-10 ${showFlowDesigns || settings.designLayout === 'flow-custom' ? 'bg-violet-500 text-white shadow-xl scale-110' : 'text-white/60 hover:text-white hover:bg-white/10'}`}
-          >
-            <Sparkles className="w-5 h-5" />
-          </button>
-
-          <button 
-            onClick={() => { setShowCatalog(false); setShowFlowDesigns(false); setShowSettings(true); }}
+            onClick={() => { setShowCatalog(false); setShowSettings(true); }}
             title="App Settings"
             className={`w-12 h-12 rounded-full flex items-center justify-center transition-all shrink-0 relative z-10 ${showSettings ? 'bg-vibrant-blue text-white shadow-xl scale-110' : 'text-white/60 hover:text-white hover:bg-white/10'}`}
           >
@@ -457,7 +273,7 @@ export default function App() {
           
           <div className="w-12 h-[1px] bg-white/20 mx-auto shrink-0 relative z-10" />
 
-          {/* Design selector — Noir built-in + Google Flow imports */}
+          {/* Design selector — Noir + Art Deco presets */}
           <div className="flex flex-col gap-3 shrink-0 relative z-10">
             <h3 className="text-[8px] text-white/40 uppercase font-black text-center mb-1 tracking-widest leading-tight">Style</h3>
             <button
@@ -467,21 +283,13 @@ export default function App() {
             >
               <Gem className="w-5 h-5" />
             </button>
-            {flowDesigns.length > 0 && (
-              <button
-                onClick={() =>
-                  handleSaveSettings({
-                    ...settings,
-                    designLayout: 'flow-custom',
-                    activeFlowDesignId: settings.activeFlowDesignId || flowDesigns[0]?.id,
-                  })
-                }
-                title="Google Flow Design"
-                className={`w-12 h-12 rounded-lg border flex items-center justify-center transition-all ${settings.designLayout === 'flow-custom' ? 'bg-violet-500 text-white border-violet-500 shadow-lg' : 'bg-white/10 text-white/40 border-transparent hover:border-white/20'}`}
-              >
-                <Sparkles className="w-5 h-5" />
-              </button>
-            )}
+            <button
+              onClick={() => handleSaveSettings({ ...settings, designLayout: 'flow-art-deco' })}
+              title="Art Deco Layout"
+              className={`w-12 h-12 rounded-lg border flex items-center justify-center transition-all ${settings.designLayout === 'flow-art-deco' ? 'bg-violet-500 text-white border-violet-500 shadow-lg' : 'bg-white/10 text-white/40 border-transparent hover:border-white/20'}`}
+            >
+              <LayoutGrid className="w-5 h-5" />
+            </button>
           </div>
 
           <AnimatePresence>
@@ -841,27 +649,12 @@ export default function App() {
             animate={{ opacity: 1, y: 0 }}
             className="relative"
           >
-            <ShelfTalker product={product} settings={settings} flowDesign={activeFlowDesign} />
+            <ShelfTalker product={product} settings={settings} />
           </motion.div>
         </section>
 
         {/* Design Modals */}
         <AnimatePresence>
-          {showFlowDesigns && (
-            <AnimatePresence>
-              <FlowDesignPanel
-                designs={flowDesigns}
-                activeDesignId={settings.activeFlowDesignId || activeFlowDesign?.id}
-                onImport={handleImportFlowDesign}
-                onSelect={handleSelectFlowDesign}
-                onUpdate={handleUpdateFlowDesign}
-                onDelete={handleDeleteFlowDesign}
-                onClose={() => setShowFlowDesigns(false)}
-                onUseLayout={() => handleSaveSettings({ ...settings, designLayout: 'flow-custom' })}
-              />
-            </AnimatePresence>
-          )}
-
           {showCatalog && (
             <motion.div 
                initial={{ x: -100, opacity: 0 }}
@@ -889,29 +682,6 @@ export default function App() {
                       onChange={e => setCatalogSearch(e.target.value)}
                       className="w-full pl-9 pr-4 py-2 bg-stone-50 border border-stone-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-vibrant-blue"
                     />
-                  </div>
-                  
-                  <div className="flex gap-2">
-                    <label className="flex-1 cursor-pointer">
-                      <div className="flex items-center justify-center gap-2 py-2 bg-deep-grass text-white rounded text-[10px] font-bold uppercase tracking-widest hover:scale-[1.02] transition-all shadow-sm">
-                        <Upload className="w-3 h-3" />
-                        Upload CSV
-                      </div>
-                      <input 
-                        type="file" 
-                        accept=".csv" 
-                        className="hidden" 
-                        onChange={(e) => e.target.files?.[0] && handleCsvUpload(e.target.files[0])}
-                      />
-                    </label>
-                    <a
-                      href="/wine-catalog-template.csv"
-                      download
-                      className="flex items-center justify-center gap-1 px-3 py-2 border border-stone-200 rounded text-[10px] font-bold uppercase tracking-widest text-stone-500 hover:border-vibrant-blue hover:text-vibrant-blue transition-all"
-                      title="Download CSV template"
-                    >
-                      <FileDown className="w-3 h-3" />
-                    </a>
                   </div>
 
                   <div className="flex gap-2">
@@ -1014,15 +784,15 @@ export default function App() {
                       </div>
                     ))
                   ) : (
-                    <div className="h-full flex flex-col items-center justify-center text-center p-8">
-                       <FileSpreadsheet className="w-10 h-10 text-stone-100 mb-4" />
+                     <div className="h-full flex flex-col items-center justify-center text-center p-8">
+                       <Wine className="w-10 h-10 text-stone-100 mb-4" />
                        <p className="text-xs font-bold text-stone-400 uppercase tracking-widest leading-loose">
                          Catalog Empty<br/>
                          <span className="text-[10px] font-medium lowercase tracking-normal text-stone-300 italic">
-                           Upload a CSV with columns: Producer, Name, Vintage, Region, Description, Score, Reviewer, Image Link
+                           Save wines from the editor to populate your catalog.
                          </span>
                        </p>
-                    </div>
+                     </div>
                   )}
                </div>
             </motion.div>
@@ -1104,60 +874,7 @@ export default function App() {
                     <p className="text-[9px] text-gray-400 italic">These tags will populate automatically for new items.</p>
                   </div>
 
-                  {/* Workspace backup */}
-                  <div className="space-y-2 pt-2 border-t border-slate-100">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Workspace Backup</label>
-                    <p className="text-[9px] text-gray-400 leading-relaxed">
-                      Export catalog, Flow designs, settings, and print history. Restore on another machine or after a browser reset.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={handleExportBackup}
-                      className="w-full flex items-center justify-center gap-2 py-2.5 bg-slate-900 text-white rounded text-[10px] font-bold uppercase tracking-widest hover:bg-slate-800 transition-all"
-                    >
-                      <FileDown className="w-3.5 h-3.5" />
-                      Export Backup JSON
-                    </button>
-                    <label className="cursor-pointer block">
-                      <div className="flex items-center justify-center gap-2 py-2.5 border-2 border-dashed border-gray-100 rounded text-[10px] font-bold uppercase tracking-widest text-gray-500 hover:border-vibrant-blue hover:text-vibrant-blue transition-all">
-                        <Upload className="w-3.5 h-3.5" />
-                        Restore from Backup
-                      </div>
-                      <input
-                        type="file"
-                        accept=".json,application/json"
-                        className="hidden"
-                        onChange={(e) => e.target.files?.[0] && handleImportBackup(e.target.files[0])}
-                      />
-                    </label>
-                  </div>
 
-                  {/* Google Flow */}
-                  <div className="space-y-2 pt-2 border-t border-slate-100">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Google Flow Designs</label>
-                    <p className="text-[9px] text-gray-400 leading-relaxed">
-                      Design shelf talker backgrounds in{' '}
-                      <a href="https://labs.google/fx/tools/flow" target="_blank" rel="noopener noreferrer" className="text-violet-600 hover:underline">
-                        Google Flow
-                      </a>
-                      , export PNG, then import via the Sparkles panel in the sidebar.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => { setShowSettings(false); setShowFlowDesigns(true); }}
-                      className="w-full flex items-center justify-center gap-2 py-2.5 bg-violet-50 text-violet-700 rounded text-[10px] font-bold uppercase tracking-widest hover:bg-violet-100 transition-all"
-                    >
-                      <Sparkles className="w-3.5 h-3.5" />
-                      Open Flow Design Library
-                    </button>
-                    <a
-                      href="/google-flow-prompt-guide.txt"
-                      download
-                      className="text-[9px] text-violet-600 hover:underline block"
-                    >
-                      Download Flow prompt guide
-                    </a>
-                  </div>
                 </div>
 
                 <div className="bg-slate-50 p-6 border-t border-gray-100 mt-4 flex justify-end">
@@ -1172,94 +889,7 @@ export default function App() {
             </motion.div>
           )}
 
-          {csvImportPending && (
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-8"
-              onClick={() => setCsvImportPending(null)}
-            >
-              <motion.div 
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-                className="bg-white rounded-lg shadow-2xl w-full max-w-lg overflow-hidden border border-violet-100"
-                onClick={e => e.stopPropagation()}
-              >
-                <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-stone-50">
-                  <div className="flex items-center gap-2">
-                    <Database className="w-5 h-5 text-violet-600" />
-                    <h2 className="text-sm font-black uppercase tracking-widest text-gray-900">Duplicate Wines Detected</h2>
-                  </div>
-                  <button onClick={() => setCsvImportPending(null)} className="text-gray-400 hover:text-black">
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-                
-                <div className="p-6 space-y-4 max-h-[380px] overflow-y-auto custom-scrollbar">
-                  <p className="text-xs text-stone-600 leading-relaxed">
-                    We found <strong>{csvImportPending.duplicateWines.length} duplicate</strong> wine(s) in your CSV that already exist in your catalog.
-                  </p>
-                  
-                  <div className="space-y-2.5">
-                    <span className="text-[9px] uppercase tracking-wider font-bold text-stone-400">Conflict Examples (Incoming vs Catalog)</span>
-                    {csvImportPending.duplicateWines.slice(0, 3).map((item, idx) => (
-                      <div key={idx} className="p-3 bg-stone-50 rounded border border-stone-100 flex flex-col gap-1 text-[11px]">
-                        <div className="flex justify-between font-semibold">
-                          <span className="text-violet-600 uppercase font-bold">Incoming Row:</span>
-                          <span className="text-stone-700 font-serif italic">{item.incoming.producer} {item.incoming.name} ({item.incoming.vintage})</span>
-                        </div>
-                        <div className="flex justify-between font-semibold">
-                          <span className="text-stone-700 uppercase font-bold">In Catalog:</span>
-                          <span className="text-stone-700 font-serif italic">{item.existing.producer} {item.existing.name} ({item.existing.vintage})</span>
-                        </div>
-                      </div>
-                    ))}
-                    {csvImportPending.duplicateWines.length > 3 && (
-                      <p className="text-[10px] text-stone-400 italic text-right">+ {csvImportPending.duplicateWines.length - 3} more duplicates</p>
-                    )}
-                  </div>
-                  
-                  <div className="bg-amber-50 border border-amber-200 rounded p-3 text-[11px] text-amber-800 leading-relaxed">
-                    <strong>Please select how to resolve these duplicates:</strong>
-                    <ul className="list-disc list-inside mt-1.5 space-y-1">
-                      <li><strong>Merge / Overwrite:</strong> Overwrites current catalog wine details with the CSV row content.</li>
-                      <li><strong>Skip Duplicates:</strong> Keeps existing catalog records; only imports completely new wines.</li>
-                      <li><strong>Keep Both:</strong> Imports all rows as new catalog entries (will create duplicate products).</li>
-                    </ul>
-                  </div>
-                </div>
 
-                <div className="bg-stone-50 p-6 border-t border-gray-100 flex flex-wrap gap-2 justify-end">
-                  <button 
-                    onClick={() => setCsvImportPending(null)}
-                    className="px-4 py-2 border border-stone-200 text-stone-600 text-[10px] font-bold uppercase tracking-widest rounded hover:bg-stone-100 transition-all"
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    onClick={handleKeepBothImport}
-                    className="px-4 py-2 bg-stone-800 text-white text-[10px] font-bold uppercase tracking-widest rounded hover:bg-stone-900 transition-all"
-                  >
-                    Keep Both
-                  </button>
-                  <button 
-                    onClick={handleSkipImport}
-                    className="px-4 py-2 bg-violet-600 text-white text-[10px] font-bold uppercase tracking-widest rounded hover:bg-violet-700 transition-all shadow-md"
-                  >
-                    Skip Duplicates
-                  </button>
-                  <button 
-                    onClick={handleMergeImport}
-                    className="px-4 py-2 bg-vibrant-blue text-white text-[10px] font-bold uppercase tracking-widest rounded hover:bg-blue-800 transition-all shadow-md"
-                  >
-                    Merge & Update
-                  </button>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
         </AnimatePresence>
 
         {/* Queue Preview Overlay */}
@@ -1311,7 +941,7 @@ export default function App() {
               height: getTalkerDimensions(settings.designLayout).heightPx,
             }}
           >
-            <ShelfTalker product={printItem} settings={settings} forPrint flowDesign={activeFlowDesign} />
+            <ShelfTalker product={printItem} settings={settings} forPrint />
           </div>
         )}
       </div>

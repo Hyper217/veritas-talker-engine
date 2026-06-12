@@ -1,14 +1,13 @@
 import { Wine } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
-import { Product, AppSettings, FlowDesign } from '../types';
+import { Product, AppSettings } from '../types';
 import { formatDropboxUrl } from '../lib/utils';
-import { getFlowLayout, zoneStyle } from '../lib/flowLayout';
+import { FLOW_PRESETS, zoneStyle } from '../lib/flowLayout';
 
 interface Props {
   product: Product;
   settings?: AppSettings;
   forPrint?: boolean;
-  flowDesign?: FlowDesign | null;
 }
 
 function AutoSizeText({
@@ -84,7 +83,7 @@ function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-export default function ShelfTalker({ product, settings, forPrint = false, flowDesign }: Props) {
+export default function ShelfTalker({ product, settings, forPrint = false }: Props) {
   const imageUrl = formatDropboxUrl(product.dropboxImageUrl);
   const logoUrl = product.logoUrl || settings?.defaultLogoUrl;
   const formattedLogoUrl = logoUrl
@@ -93,7 +92,7 @@ export default function ShelfTalker({ product, settings, forPrint = false, flowD
       : formatDropboxUrl(logoUrl)
     : null;
   const layout = settings?.designLayout || 'royal-dark';
-  const accentColor = settings?.royalDarkColor || flowDesign?.accentColor || '#D4AF37';
+  const accentColor = settings?.royalDarkColor || '#D4AF37';
 
   const printClass = forPrint ? 'shadow-none' : '';
   const noirShadow = forPrint ? '' : 'shadow-[0_20px_50px_rgba(0,0,0,0.5)]';
@@ -244,13 +243,14 @@ export default function ShelfTalker({ product, settings, forPrint = false, flowD
   );
 
   const renderFlowImport = () => {
-    const flowLayout = getFlowLayout(flowDesign);
+    const preset = FLOW_PRESETS['flow-art-deco'];
+    const flowLayout = preset.layout;
     const { zones } = flowLayout;
-    const textColor = flowDesign?.textColor ?? (flowLayout.textOnDark ? '#D4AF37' : '#111827');
-    const flowAccent = flowDesign?.accentColor ?? textColor;
+    const textColor = preset.textColor;
+    const flowAccent = preset.accentColor;
 
-    const shadowColor = flowLayout.textShadowColor ?? (flowLayout.textOnDark ? 'rgba(0,0,0,0.85)' : 'rgba(255,255,255,0.9)');
-    const shadowBlur = flowLayout.textShadowBlur ?? (flowLayout.textOnDark ? 8 : 4);
+    const shadowColor = flowLayout.textShadowColor ?? 'rgba(0,0,0,0.85)';
+    const shadowBlur = flowLayout.textShadowBlur ?? 8;
     const textShadow = shadowBlur > 0
       ? `0 1px ${shadowBlur}px ${shadowColor}, 0 0 ${shadowBlur * 2}px ${shadowColor}`
       : 'none';
@@ -267,9 +267,9 @@ export default function ShelfTalker({ product, settings, forPrint = false, flowD
         className={`shelf-talker w-[384px] h-[510px] relative overflow-hidden box-border ${printClass}`}
         id={`shelf-talker-${product.id}`}
       >
-        {flowDesign?.imageUrl ? (
+        {preset.backgroundImageUrl ? (
           <img
-            src={flowDesign.imageUrl}
+            src={preset.backgroundImageUrl}
             alt=""
             className="absolute inset-0 w-full h-full object-cover"
             crossOrigin="anonymous"
@@ -277,7 +277,7 @@ export default function ShelfTalker({ product, settings, forPrint = false, flowD
         ) : (
           <div className="absolute inset-0 bg-stone-100 flex items-center justify-center p-8 text-center">
             <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">
-              Import artwork from Google Flow
+              Art Deco design preset background missing
             </p>
           </div>
         )}
@@ -396,7 +396,7 @@ export default function ShelfTalker({ product, settings, forPrint = false, flowD
     );
   };
 
-  if (layout === 'flow-custom') {
+  if (layout === 'flow-art-deco') {
     return renderFlowImport();
   }
 

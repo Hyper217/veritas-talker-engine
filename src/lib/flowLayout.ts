@@ -1,24 +1,4 @@
-import { FlowDesign, FlowDesignLayout, FlowLayoutPreset, FlowZone } from '../types';
-
-export const DEFAULT_FLOW_LAYOUT: FlowDesignLayout = {
-  preset: 'default',
-  textOnDark: false,
-  descriptionPanelOpacity: 70,
-  tagSeparator: ' ',
-  textShadowColor: 'rgba(255,255,255,0.9)',
-  textShadowBlur: 4,
-  descriptionPanelColor: '#ffffff',
-  zones: {
-    region: { top: 4, left: 5, width: 58, height: 4 },
-    producer: { top: 9, left: 5, width: 52, height: 7 },
-    wineName: { top: 16, left: 5, width: 52, height: 6 },
-    score: { top: 3.5, left: 74, width: 21, height: 10 },
-    bottle: { top: 28, left: 5, width: 38, height: 50 },
-    description: { top: 32, left: 46, width: 49, height: 44 },
-    tags: { top: 91, left: 5, width: 68, height: 5 },
-    logo: { top: 87, left: 78, width: 18, height: 10 },
-  },
-};
+import { FlowDesignLayout, FlowZone } from '../types';
 
 /** Matches Flow art with left arch, right text column, footer band */
 export const ART_DECO_FLOW_LAYOUT: FlowDesignLayout = {
@@ -41,46 +21,23 @@ export const ART_DECO_FLOW_LAYOUT: FlowDesignLayout = {
   },
 };
 
-export const FLOW_LAYOUT_PRESETS: Record<FlowLayoutPreset, FlowDesignLayout> = {
-  default: DEFAULT_FLOW_LAYOUT,
-  'art-deco': ART_DECO_FLOW_LAYOUT,
-  custom: DEFAULT_FLOW_LAYOUT,
-};
-
-export type FlowZoneKey = keyof FlowDesignLayout['zones'];
-
-export const FLOW_ZONE_LABELS: Record<FlowZoneKey, string> = {
-  region: 'Region',
-  producer: 'Producer',
-  wineName: 'Wine name + vintage',
-  score: 'Score badge',
-  bottle: 'Bottle photo',
-  description: 'Tasting notes',
-  tags: 'Tags footer',
-  logo: 'Logo',
-};
-
-export function getFlowLayout(design?: { layout?: FlowDesignLayout } | null): FlowDesignLayout {
-  if (!design?.layout?.zones) return DEFAULT_FLOW_LAYOUT;
-  return {
-    ...DEFAULT_FLOW_LAYOUT,
-    ...design.layout,
-    zones: { ...DEFAULT_FLOW_LAYOUT.zones, ...design.layout.zones },
-  };
+export interface FlowPreset {
+  name: string;
+  backgroundImageUrl: string;
+  textColor: string;
+  accentColor: string;
+  layout: FlowDesignLayout;
 }
 
-export function applyLayoutPreset(preset: FlowLayoutPreset): FlowDesignLayout {
-  const base = FLOW_LAYOUT_PRESETS[preset === 'custom' ? 'default' : preset];
-  return JSON.parse(JSON.stringify({ ...base, preset })) as FlowDesignLayout;
-}
-
-export function layoutForNewImport(): Partial<FlowDesign> {
-  return {
+export const FLOW_PRESETS: Record<'flow-art-deco', FlowPreset> = {
+  'flow-art-deco': {
+    name: 'Art Deco',
+    backgroundImageUrl: '/designs/art-deco.png',
     textColor: '#D4AF37',
     accentColor: '#D4AF37',
-    layout: applyLayoutPreset('art-deco'),
-  };
-}
+    layout: ART_DECO_FLOW_LAYOUT,
+  },
+};
 
 export function zoneStyle(zone: FlowZone): {
   top: string;
@@ -95,3 +52,4 @@ export function zoneStyle(zone: FlowZone): {
     height: `${zone.height}%`,
   };
 }
+

@@ -1,4 +1,4 @@
-import { AppSettings, FlowDesign, Product } from '../types';
+import { AppSettings, Product } from '../types';
 
 export const BACKUP_VERSION = 1 as const;
 
@@ -14,14 +14,12 @@ export interface AppBackup {
   app: 'veritas-talker-engine';
   catalog: Product[];
   settings: AppSettings;
-  flowDesigns: FlowDesign[];
   sessions: SessionBackup[];
 }
 
 export function buildBackup(
   catalog: Product[],
   settings: AppSettings,
-  flowDesigns: FlowDesign[],
   sessions: SessionBackup[]
 ): AppBackup {
   return {
@@ -30,7 +28,6 @@ export function buildBackup(
     app: 'veritas-talker-engine',
     catalog,
     settings,
-    flowDesigns,
     sessions,
   };
 }
@@ -64,7 +61,7 @@ export function parseBackup(raw: string): AppBackup {
     app: 'veritas-talker-engine',
     catalog: data.catalog,
     settings: data.settings,
-    flowDesigns: Array.isArray(data.flowDesigns) ? data.flowDesigns : [],
     sessions: Array.isArray(data.sessions) ? data.sessions : [],
   };
 }
+

@@ -12,8 +12,8 @@ export interface Product {
   logoUrl: string;
 }
 
-/** Built-in Noir (black & gold) or Google Flow import */
-export type DesignLayout = 'royal-dark' | 'flow-custom';
+/** Built-in Noir (black & gold) or Art Deco preset */
+export type DesignLayout = 'royal-dark' | 'flow-art-deco';
 
 export type FlowLayoutPreset = 'default' | 'art-deco' | 'custom';
 
@@ -47,24 +47,12 @@ export interface FlowDesignLayout {
   descriptionPanelColor?: string;
 }
 
-export interface FlowDesign {
-  id: string;
-  name: string;
-  /** Full shelf talker artwork exported from Google Flow */
-  imageUrl: string;
-  textColor?: string;
-  accentColor?: string;
-  layout?: FlowDesignLayout;
-  createdAt: string;
-}
-
 export interface AppSettings {
   defaultLogoUrl: string;
   defaultTags: string[];
   designLayout: DesignLayout;
   /** Accent color for Noir layout (default gold) */
   royalDarkColor?: string;
-  activeFlowDesignId?: string;
 }
 
 export type OperationType = 'create' | 'update' | 'delete' | 'list' | 'get' | 'write';
