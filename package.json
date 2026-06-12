@@ -1,7 +1,7 @@
 {
   "name": "veritas-talker-engine",
   "private": true,
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Wine shelf talker designer and print PDF generator",
   "type": "module",
   "scripts": {
