@@ -105,7 +105,7 @@ export default function ShelfTalker({ product, settings, forPrint = false, flowD
     >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(60,60,60,0.15)_0%,transparent_70%)]" />
 
-      <header className="pt-10 pb-2 px-8 flex flex-col items-center relative z-10">
+      <header className="pt-8 pb-2 px-8 flex flex-col items-center relative z-10 shrink-0">
         <h1
           className="font-serif text-[26px] font-medium tracking-[0.05em] leading-tight"
           style={{ color: accentColor }}
@@ -130,11 +130,11 @@ export default function ShelfTalker({ product, settings, forPrint = false, flowD
         </div>
       </header>
 
-      <div className="flex-1 px-8 py-3 flex flex-col relative">
-        <div className="flex flex-1 gap-2 items-center relative">
-          <div className="flex-1 flex flex-col items-center justify-center">
+      <div className="flex-1 min-h-0 px-8 py-2 flex flex-col relative">
+        <div className="flex flex-1 min-h-0 gap-2 items-center relative">
+          <div className="flex-1 flex flex-col items-center justify-center min-h-0">
             <div
-              className="w-[140px] h-[185px] rounded-t-[70px] border-2 flex items-center justify-center bg-black/40 relative"
+              className="w-[140px] h-[170px] max-h-full rounded-t-[70px] border-2 flex items-center justify-center bg-black/40 relative"
               style={{ borderColor: `${accentColor}99`, boxShadow: `0 0 20px ${accentColor}1A` }}
             >
               <div
@@ -189,7 +189,7 @@ export default function ShelfTalker({ product, settings, forPrint = false, flowD
           )}
         </div>
 
-        <div className="text-center mt-3">
+        <div className="text-center mt-2 shrink-0">
           <h2 className="font-serif text-[32px] text-white font-medium leading-none tracking-tight">
             {product.vintage} {product.name.split("'")[0].trim() || 'Variety'}
           </h2>
@@ -217,9 +217,9 @@ export default function ShelfTalker({ product, settings, forPrint = false, flowD
         </div>
       </div>
 
-      <footer className="h-24 bg-black/40 border-t border-stone-900/50 flex flex-col px-8 relative z-10">
-        <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-stone-800 to-transparent" />
-        <div className="flex-1 grid grid-cols-3 divide-x divide-stone-900/50 py-3">
+      <footer className="h-24 shrink-0 bg-black/40 border-t border-stone-900/50 flex flex-col px-8 relative z-10">
+        <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-stone-800 to-transparent shrink-0" />
+        <div className="flex-1 min-h-0 grid grid-cols-3 divide-x divide-stone-900/50 py-2">
           <div className="flex flex-col items-center justify-center gap-1">
             <span className="text-[7px] text-stone-600 font-black uppercase tracking-widest">Natural</span>
             <span className="text-[11px] text-stone-300 font-bold tracking-tight">

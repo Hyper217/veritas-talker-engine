@@ -17,6 +17,7 @@ import {
   getPageCount,
   waitForElementReady,
 } from './lib/pdf';
+import { APP_VERSION } from './version';
 
 const INITIAL_SETTINGS: AppSettings = {
   defaultLogoUrl: '',
@@ -533,10 +534,13 @@ export default function App() {
         <button 
           onClick={handleRestart}
           title="Reset Workspace"
-          className="w-12 h-12 rounded-full flex items-center justify-center text-white/60 hover:text-white hover:bg-red-500 hover:shadow-[0_0_20px_rgba(239,68,68,0.5)] border border-transparent transition-all mt-auto mb-2 shrink-0 relative z-10 group"
+          className="w-12 h-12 rounded-full flex items-center justify-center text-white/60 hover:text-white hover:bg-red-500 hover:shadow-[0_0_20px_rgba(239,68,68,0.5)] border border-transparent transition-all mt-auto shrink-0 relative z-10 group"
         >
           <Trash2 className="w-5 h-5 transition-transform group-hover:scale-110" />
         </button>
+        <p className="text-[9px] text-white/35 font-bold uppercase tracking-widest shrink-0 relative z-10 pb-1">
+          v{APP_VERSION}
+        </p>
       </aside>
 
       {/* Editor Sidebar */}
@@ -549,7 +553,7 @@ export default function App() {
             </div>
             <div>
               <h1 className="text-xl font-serif font-black italic tracking-tight">Veritas Engine</h1>
-              <p className="text-[11px] text-gray-400 uppercase tracking-widest leading-none mt-1">Editorial Interface v2.0</p>
+              <p className="text-[11px] text-gray-400 uppercase tracking-widest leading-none mt-1">Build v{APP_VERSION}</p>
             </div>
           </div>
         </div>
