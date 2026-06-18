@@ -1,0 +1,59 @@
+# Veritas Talker Engine
+
+Wine shelf talker designer and print PDF generator. Private repo: https://github.com/Hyper217/veritas-talker-engine
+
+## Current phase
+
+Phase 1 — Build Hardening. See `ROADMAP.md` for the single source of truth. Do not start Phase 2+ until exit criteria are met. Desktop `.exe` (Tauri) is Phase 4 — last.
+
+## Tech stack
+
+- React 19 + TypeScript + Vite 6 (ESM, `type: "module"`)
+- Tailwind CSS 4 via `@tailwindcss/vite`
+- TipTap (rich text), html2canvas + jsPDF (PDF), Motion (animations)
+- Lucide React icons
+- Local storage only — no backend, no cloud required
+
+## Dev commands
+
+- `npm run dev` — port **3001** (intentional; avoids localhost clashes)
+- `npm run build` / `npm run preview` — production on port 4173
+- `npm run lint` — `tsc --noEmit` only
+
+## Architecture
+
+```
+src/
+├── App.tsx              # Main UI, catalog, queue, PDF orchestration
+├── components/          # ShelfTalker, LayoutEditor, RichTextEditor, Toast, FitText
+├── lib/                 # pdf.ts, flowLayout.ts, talkerDimensions.ts, utils.ts
+└── types.ts             # Product, AppSettings, FlowZone, DesignLayout
+```
+
+**Layouts:** Noir (built-in black & gold) + Google Flow imports only. Classic/Bento/Heritage/Botanical were removed — do not reintroduce.
+
+**Flow workflow:** Design in Google Flow (3:4 portrait) → export PNG → import via Sparkles panel → zone overlays at print time. No Flow API exists.
+
+## Print constraints
+
+- Talker size: 4×5 inches (384×510 px constants in `types.ts`)
+- 2×2 grid per US Letter sheet; queues >4 wines span multiple pages
+- PDF uses sequential html2canvas capture at scale 3 — preserve exact dimensions, no stretch
+- Chrome/Edge produce best PDF output
+- Remote images need CORS; Dropbox links and drag-drop always work
+- html2canvas cannot render oklch colors — `pdf.ts` has a fixOklchColors workaround
+
+## Coding preferences
+
+- Minimize scope — smallest correct diff; don't add unrelated features
+- Match existing patterns: functional React, `useCallback`/`useMemo` where already used
+- Types live in `types.ts`; print constants in `talkerDimensions.ts`
+- Data migrations: follow `migrateSettings` / `migrateDesignLayout` patterns for localStorage
+- Only add tests or docs when explicitly requested
+- Never commit secrets; catalog/settings are localStorage only
+
+## Git
+
+- Branch: `master`
+- Git hooks installed via `postinstall` (version bump script)
+- Do not force-push to master
