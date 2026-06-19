@@ -1,12 +1,15 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Plus, Printer, Trash2, Download, Wine, LayoutGrid, Settings as SettingsIcon, X, Search, Gem, CheckSquare, Square, Database } from 'lucide-react';
+import { Plus, Printer, Trash2, Download, Wine, LayoutGrid, Settings as SettingsIcon, X, Search, CheckSquare, Square, Database, Palette, SlidersHorizontal } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Product, AppSettings } from './types';
+import { Product, AppSettings, ZoneKey } from './types';
 import ShelfTalker from './components/ShelfTalker';
 import RichTextEditor from './components/RichTextEditor';
+import LayoutEditor from './components/LayoutEditor';
+import LayoutEditorOverlay from './components/LayoutEditorOverlay';
 import Toast, { ToastMessage } from './components/Toast';
 import { formatDropboxUrl } from './lib/utils';
 import { getTalkerDimensions } from './lib/talkerDimensions';
+import { FLOW_PRESETS, DESIGN_LAYOUTS, migrateDesignLayout } from './lib/flowLayout';
 import {
   buildPdfFromCanvases,
   captureTalkerElement,
@@ -18,19 +21,18 @@ import { APP_VERSION } from './version';
 const INITIAL_SETTINGS: AppSettings = {
   defaultLogoUrl: '',
   defaultTags: ['ORGANIC', 'NATIVE FERMENTS', 'UNFILTERED'],
-  designLayout: 'royal-dark',
+  designLayout: 'noir-luxury',
   royalDarkColor: '#D4AF37',
 };
 
 function migrateSettings(raw: Partial<AppSettings>): AppSettings {
-  const layout = ((raw.designLayout as any) === 'flow-custom' || raw.designLayout === 'flow-art-deco') 
-    ? 'flow-art-deco' 
-    : 'royal-dark';
   return {
     defaultLogoUrl: raw.defaultLogoUrl ?? '',
     defaultTags: raw.defaultTags ?? INITIAL_SETTINGS.defaultTags,
-    designLayout: layout,
+    designLayout: migrateDesignLayout(raw.designLayout),
     royalDarkColor: raw.royalDarkColor ?? '#D4AF37',
+    layoutOverrides: raw.layoutOverrides,
+    typographyOverrides: raw.typographyOverrides,
   };
 }
 
@@ -69,6 +71,9 @@ export default function App() {
   });
   const [showSettings, setShowSettings] = useState(false);
   const [showCatalog, setShowCatalog] = useState(false);
+  const [showStyleGallery, setShowStyleGallery] = useState(false);
+  const [showLayoutEditor, setShowLayoutEditor] = useState(false);
+  const [layoutEditZone, setLayoutEditZone] = useState<ZoneKey>('description');
   const [catalogSearch, setCatalogSearch] = useState('');
   const [catalog, setCatalog] = useState<Product[]>(() => {
     const saved = localStorage.getItem('veritas_catalog');
@@ -273,27 +278,31 @@ export default function App() {
           
           <div className="w-12 h-[1px] bg-white/20 mx-auto shrink-0 relative z-10" />
 
-          {/* Design selector — Noir + Art Deco presets */}
+          {/* Design selector — premium template gallery */}
           <div className="flex flex-col gap-3 shrink-0 relative z-10">
             <h3 className="text-[8px] text-white/40 uppercase font-black text-center mb-1 tracking-widest leading-tight">Style</h3>
             <button
-              onClick={() => handleSaveSettings({ ...settings, designLayout: 'royal-dark' })}
-              title="Noir — Black & Gold"
-              className={`w-12 h-12 rounded-lg border flex items-center justify-center transition-all ${settings.designLayout === 'royal-dark' ? 'bg-vibrant-blue text-white border-vibrant-blue shadow-lg' : 'bg-white/10 text-white/40 border-transparent hover:border-white/20'}`}
+              onClick={() => {
+                setShowCatalog(false);
+                setShowSettings(false);
+                setShowStyleGallery(!showStyleGallery);
+              }}
+              title="Choose Shelf Talker Style"
+              className={`w-12 h-12 rounded-lg border flex items-center justify-center transition-all ${showStyleGallery ? 'bg-vibrant-blue text-white border-vibrant-blue shadow-lg' : 'bg-white/10 text-white/40 border-transparent hover:border-white/20'}`}
             >
-              <Gem className="w-5 h-5" />
+              <Palette className="w-5 h-5" />
             </button>
             <button
-              onClick={() => handleSaveSettings({ ...settings, designLayout: 'flow-art-deco' })}
-              title="Art Deco Layout"
-              className={`w-12 h-12 rounded-lg border flex items-center justify-center transition-all ${settings.designLayout === 'flow-art-deco' ? 'bg-violet-500 text-white border-violet-500 shadow-lg' : 'bg-white/10 text-white/40 border-transparent hover:border-white/20'}`}
+              onClick={() => setShowLayoutEditor(!showLayoutEditor)}
+              title="Layout editor — move zones & tune text fit"
+              className={`w-12 h-12 rounded-lg border flex items-center justify-center transition-all ${showLayoutEditor ? 'bg-emerald-600 text-white border-emerald-600 shadow-lg' : 'bg-white/10 text-white/40 border-transparent hover:border-white/20'}`}
             >
-              <LayoutGrid className="w-5 h-5" />
+              <SlidersHorizontal className="w-5 h-5" />
             </button>
           </div>
 
           <AnimatePresence>
-            {settings.designLayout === 'royal-dark' && (
+            {settings.designLayout === 'noir-luxury' && (
               <motion.div 
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -643,18 +652,114 @@ export default function App() {
         <div className="absolute inset-0 bg-grain z-0" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.05)_100%)] z-0 pointer-events-none" />
 
-        <section className="flex-1 flex items-center justify-center p-12 overflow-auto relative z-10">
+        <section className="flex-1 flex items-center justify-center p-12 overflow-auto relative z-10 gap-8">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="relative"
+            className="relative shrink-0"
           >
-            <ShelfTalker product={product} settings={settings} />
+            <ShelfTalker
+              product={product}
+              settings={settings}
+              layoutEditMode={showLayoutEditor}
+            />
+            {showLayoutEditor && (
+              <LayoutEditorOverlay
+                settings={settings}
+                onSave={handleSaveSettings}
+                selectedZone={layoutEditZone}
+                onSelectZone={setLayoutEditZone}
+                talkerId={product.id}
+              />
+            )}
+            <p className="text-center mt-4 text-[10px] font-bold uppercase tracking-widest text-stone-500/80">
+              {FLOW_PRESETS[settings.designLayout].name}
+            </p>
           </motion.div>
+
+          <AnimatePresence>
+            {showLayoutEditor && (
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                className="w-80 shrink-0 bg-white/95 backdrop-blur border border-editorial-border rounded-lg shadow-xl p-4 max-h-[calc(100vh-8rem)] overflow-hidden flex flex-col"
+              >
+                <LayoutEditor
+                  settings={settings}
+                  onSave={handleSaveSettings}
+                  selectedZone={layoutEditZone}
+                  onSelectZone={setLayoutEditZone}
+                  previewProductId={product.id}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </section>
 
         {/* Design Modals */}
         <AnimatePresence>
+          {showStyleGallery && (
+            <motion.div
+              initial={{ x: -100, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: -100, opacity: 0 }}
+              className="absolute left-20 inset-y-0 w-96 bg-white border-r border-editorial-border z-40 flex flex-col shadow-2xl"
+            >
+              <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-stone-50">
+                <div>
+                  <h2 className="text-sm font-black uppercase tracking-widest text-gray-900">Shelf Talker Styles</h2>
+                  <p className="text-[10px] text-stone-400 font-bold uppercase tracking-wider">9 Premium Templates</p>
+                </div>
+                <button onClick={() => setShowStyleGallery(false)} className="text-stone-400 hover:text-black">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto custom-scrollbar p-4">
+                <div className="grid grid-cols-2 gap-3">
+                  {DESIGN_LAYOUTS.map((layoutKey) => {
+                    const preset = FLOW_PRESETS[layoutKey];
+                    const selected = settings.designLayout === layoutKey;
+                    return (
+                      <button
+                        key={layoutKey}
+                        type="button"
+                        onClick={() => {
+                          handleSaveSettings({ ...settings, designLayout: layoutKey });
+                          setShowStyleGallery(false);
+                        }}
+                        className={`group text-left rounded-lg border overflow-hidden transition-all ${
+                          selected
+                            ? 'border-vibrant-blue ring-2 ring-vibrant-blue/30 shadow-lg'
+                            : 'border-stone-200 hover:border-stone-400 hover:shadow-md'
+                        }`}
+                      >
+                        <div className="aspect-[3/4] bg-stone-100 overflow-hidden relative">
+                          <img
+                            src={preset.backgroundImageUrl}
+                            alt={preset.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                          {selected && (
+                            <div className="absolute top-2 right-2 w-5 h-5 bg-vibrant-blue rounded-full flex items-center justify-center">
+                              <CheckSquare className="w-3 h-3 text-white" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="p-2.5 bg-white">
+                          <p className="text-[10px] font-black uppercase tracking-wider text-gray-800 truncate">
+                            {preset.name}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </motion.div>
+          )}
+
           {showCatalog && (
             <motion.div 
                initial={{ x: -100, opacity: 0 }}
