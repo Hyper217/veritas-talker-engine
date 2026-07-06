@@ -6,6 +6,8 @@
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Check } from 'lucide-react';
 import { TEMPLATE_LIST } from '../lib/templates';
+import { PREVIEW_PRODUCT, PREVIEW_SETTINGS } from '../lib/previewSample';
+import ShelfTalker from './ShelfTalker';
 import type { TemplateId } from '../types';
 
 interface PickerProps {
@@ -48,12 +50,10 @@ export function TemplatePicker({ currentId, onSelect, onClose, compact = false }
                     : 'ring-1 ring-white/10 hover:ring-white/30'
                 }`}
               >
-                <div className="aspect-[3/4] bg-zinc-800">
-                  <img
-                    src={tmpl.thumbnailUrl}
-                    alt={tmpl.label}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
+                <div className="aspect-[3/4] bg-zinc-900 pointer-events-none">
+                  <ShelfTalker
+                    product={PREVIEW_PRODUCT}
+                    settings={{ ...PREVIEW_SETTINGS, templateId: tmpl.id }}
                   />
                 </div>
 
