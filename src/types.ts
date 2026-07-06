@@ -1,104 +1,61 @@
+// ─── Product ──────────────────────────────────────────────────────────────────
+
 export interface Product {
   id: string;
-  producer: string;
-  name: string;
-  vintage: string;
-  region: string;
-  score: number | null;
-  reviewer: string;
-  description: string;
-  tags: string[];
-  dropboxImageUrl: string;
-  logoUrl: string;
+  producer: string;       // Brand / Producer (≤40 chars)
+  name: string;           // Item / Wine name (≤60 chars)
+  vintage: string;        // Year / Vintage (≤4 chars)
+  region: string;         // Region / Origin (≤50 chars)
+  score: number | null;   // Score 0–100 (3 chars)
+  reviewer: string;       // Reviewer / Source (≤30 chars)
+  description: string;    // Tasting notes / Summary (≤300 chars)
+  tags: string[];         // Attributes / Tags (80 chars total)
+  bottleImageUrl: string; // Data URI, blob URL, or Dropbox URL
+  logoUrl: string;        // Winery / Brand logo
+  showScore: boolean;     // Per-item: show score bubble
+  showBottle: boolean;    // Per-item: show bottle image
 }
 
-export type DesignLayout =
-  | 'noir-luxury'
+// ─── Templates ────────────────────────────────────────────────────────────────
+
+export type TemplateId =
   | 'clean-minimal'
-  | 'autumn-harvest'
-  | 'burgundy-modern'
-  | 'burgundy-heritage'
-  | 'festive-winter'
-  | 'light-airy'
   | 'minimal-editorial'
-  | 'organic-natural';
+  | 'burgundy-heritage'
+  | 'botanical-green'
+  | 'rustic-kraft'
+  | 'autumn-harvest'
+  | 'burgundy-marble'
+  | 'art-deco';
 
-export type FlowLayoutPreset = 'default' | 'art-deco' | 'custom';
-
-/** Position as % of talker (0–100) */
-export interface FlowZone {
-  top: number;
-  left: number;
-  width: number;
-  height: number;
-}
-
-export type ZoneKey =
-  | 'region'
-  | 'producer'
-  | 'wineName'
-  | 'score'
-  | 'bottle'
-  | 'description'
-  | 'tags'
-  | 'logo';
-
-/** How text should conform to the design structure */
 export type FitMode = 'box' | 'lines' | 'single';
 
-export interface ZoneTypography {
-  maxFontSize?: number;
-  minFontSize?: number;
-  fontFamily?: 'serif' | 'sans';
-  fontWeight?: number;
-  fontStyle?: 'normal' | 'italic';
-  textAlign?: 'left' | 'center' | 'right';
-  uppercase?: boolean;
-  letterSpacing?: string;
-  /** Unitless ratio, or overridden when fitMode is 'lines' */
-  lineHeight?: number;
-  colorRole?: 'text' | 'accent' | 'muted';
-  /** Explicit color that overrides colorRole (e.g. light text on a dark header band) */
-  color?: string;
-  alignItems?: 'flex-start' | 'center' | 'flex-end';
-  justifyContent?: 'flex-start' | 'center' | 'flex-end';
-  singleLine?: boolean;
-  /** Match ruled lines printed on the template artwork */
-  fitMode?: FitMode;
-  /** Number of ruled lines visible in this zone (description panels) */
-  lineCount?: number;
-  /** Inner padding in pixels */
-  paddingX?: number;
-  paddingY?: number;
-  /** Offset from zone top to first text baseline (px) */
-  lineOffsetTop?: number;
-}
+// ─── Template Config ──────────────────────────────────────────────────────────
 
-export interface FlowDesignLayout {
-  preset: FlowLayoutPreset;
-  zones: Record<ZoneKey, FlowZone>;
-  textOnDark?: boolean;
-  descriptionPanelOpacity?: number;
+export interface TemplateConfig {
+  id: TemplateId;
+  label: string;
+  description: string;
+  thumbnailUrl: string;
+  accentColor: string;
+  textColor: string;
+  mutedColor: string;
+  textOnDark: boolean;
   tagSeparator?: string;
-  textShadowColor?: string;
-  textShadowBlur?: number;
-  descriptionPanelColor?: string;
-  typography?: Partial<Record<ZoneKey, ZoneTypography>>;
 }
 
-export type LayoutZoneOverrides = Partial<Record<ZoneKey, Partial<FlowZone>>>;
-export type TypographyZoneOverrides = Partial<Record<ZoneKey, Partial<ZoneTypography>>>;
+// ─── App Settings ─────────────────────────────────────────────────────────────
 
 export interface AppSettings {
   defaultLogoUrl: string;
   defaultTags: string[];
-  designLayout: DesignLayout;
-  royalDarkColor?: string;
-  layoutOverrides?: Partial<Record<DesignLayout, LayoutZoneOverrides>>;
-  typographyOverrides?: Partial<Record<DesignLayout, TypographyZoneOverrides>>;
+  templateId: TemplateId;
 }
 
-export type OperationType = 'create' | 'update' | 'delete' | 'list' | 'get' | 'write';
+// ─── Catalog / Sessions ───────────────────────────────────────────────────────
 
-export const TALKER_HEIGHT_PX = 510;
-export const TALKER_WIDTH_PX = 384;
+export interface CatalogSession {
+  id: string;
+  name: string;
+  items: Product[];
+}

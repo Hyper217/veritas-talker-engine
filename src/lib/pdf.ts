@@ -1,6 +1,6 @@
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
-import { DesignLayout } from '../types';
+import type { TemplateId } from '../types';
 import { getGridPositions, getTalkerDimensions } from './talkerDimensions';
 
 const CAPTURE_SCALE = 3;
@@ -98,7 +98,7 @@ export async function captureTalkerElement(
   heightPx: number
 ): Promise<HTMLCanvasElement> {
   const talkerEl =
-    (container.querySelector('.shelf-talker') as HTMLElement | null) ?? container;
+    (container.querySelector('.shelf-talker-root') as HTMLElement | null) ?? container;
 
   talkerEl.style.width = `${widthPx}px`;
   talkerEl.style.height = `${heightPx}px`;
@@ -127,7 +127,7 @@ export async function captureTalkerElement(
 
 export function buildPdfFromCanvases(
   canvases: HTMLCanvasElement[],
-  layout: DesignLayout
+  layout: TemplateId | string
 ): jsPDF {
   const { widthMm, heightMm } = getTalkerDimensions(layout);
   const positions = getGridPositions(layout);
