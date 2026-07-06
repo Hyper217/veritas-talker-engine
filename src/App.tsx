@@ -10,7 +10,7 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Wine, Plus, Database, Settings as SettingsIcon, Palette,
@@ -27,9 +27,10 @@ import { getTalkerDimensions } from './lib/talkerDimensions';
 import { buildPdfFromCanvases, captureTalkerElement, waitForElementReady } from './lib/pdf';
 import {
   loadSettings, saveSettings,
-  loadCatalog, saveCatalog, addToCatalog, removeFromCatalog,
+  loadCatalog, addToCatalog, removeFromCatalog,
   loadSessions, saveSession,
 } from './lib/catalogStore';
+import { filterCatalog } from './lib/catalogSearch';
 import { APP_VERSION } from './version';
 
 // ─── Initial state ────────────────────────────────────────────────────────────
@@ -63,7 +64,8 @@ type MobileTab = 'form' | 'preview' | 'queue';
 export default function App() {
   // ── Persisted state ──
   const [settings, setSettings] = useState<AppSettings>(loadSettings);
-  const [catalog, setCatalog]   = useState<Product[]>(loadCatalog);
+  const [catalog, setCatalog]   = useState<Product[]>([]);
+  const [catalogReady, setCatalogReady] = useState(false);
   const [sessions, setSessions] = useState(loadSessions);
 
   // ── Editor state ──
@@ -91,6 +93,27 @@ export default function App() {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
+  // ── Load catalog from IndexedDB (supports large catalogs) ──
+  useEffect(() => {
+    let cancelled = false;
+
+    loadCatalog()
+      .then((items) => {
+        if (!cancelled) {
+          setCatalog(items);
+          setCatalogReady(true);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCatalogReady(true);
+          showToast('Could not load catalog', 'error');
+        }
+      });
+
+    return () => { cancelled = true; };
+  }, [showToast]);
+
   // ── Save settings ──
   const handleSaveSettings = useCallback((s: AppSettings) => {
     setSettings(s);
@@ -117,13 +140,17 @@ export default function App() {
     showToast('Added to print queue');
   }, [product, showToast]);
 
-  const handleSaveToCatalog = useCallback(() => {
+  const handleSaveToCatalog = useCallback(async () => {
     if (!product.producer && !product.name) {
       showToast('Add a producer or item name first', 'error');
       return;
     }
-    const updated = addToCatalog({ ...product, id: crypto.randomUUID() });
-    setCatalog(updated);
+    const result = await addToCatalog({ ...product, id: crypto.randomUUID() });
+    if (result.ok === false) {
+      showToast(result.message, 'error');
+      return;
+    }
+    setCatalog(result.catalog);
     showToast('Saved to catalog');
   }, [product, showToast]);
 
@@ -147,10 +174,14 @@ export default function App() {
     setQueue((q) => q.filter((p) => p.id !== id));
   }, []);
 
-  const handleRemoveFromCatalog = useCallback((id: string) => {
-    const updated = removeFromCatalog(id);
-    setCatalog(updated);
-  }, []);
+  const handleRemoveFromCatalog = useCallback(async (id: string) => {
+    const result = await removeFromCatalog(id);
+    if (result.ok === false) {
+      showToast(result.message, 'error');
+      return;
+    }
+    setCatalog(result.catalog);
+  }, [showToast]);
 
   // ── Catalog bulk add to queue ──
   const addSelectedToQueue = useCallback(() => {
@@ -211,11 +242,29 @@ export default function App() {
   }, [queue, settings, sessions, showToast]);
 
   // ── Filtered catalog ──
-  const filteredCatalog = catalog.filter((p) => {
-    if (!catalogSearch.trim()) return true;
-    const s = catalogSearch.toLowerCase();
-    return p.producer.toLowerCase().includes(s) || p.name.toLowerCase().includes(s) || p.region.toLowerCase().includes(s);
-  });
+  const filteredCatalog = useMemo(
+    () => filterCatalog(catalog, catalogSearch),
+    [catalog, catalogSearch],
+  );
+
+  const handleAddCatalogItemToQueue = useCallback((item: Product) => {
+    setQueue((q) => [...q, { ...item, id: crypto.randomUUID() }]);
+    showToast(`Added to queue: ${item.producer || item.name}`);
+  }, [showToast]);
+
+  const handleAddCatalogItemToQueueMobile = useCallback((item: Product) => {
+    handleAddCatalogItemToQueue(item);
+    setMobileTab('queue');
+  }, [handleAddCatalogItemToQueue]);
+
+  const handleAddAllMatchingToQueue = useCallback(() => {
+    if (filteredCatalog.length === 0) return;
+    setQueue((q) => [...q, ...filteredCatalog.map((p) => ({ ...p, id: crypto.randomUUID() }))]);
+    showToast(`Added ${filteredCatalog.length} item${filteredCatalog.length === 1 ? '' : 's'} to queue`);
+    setCatalogSearch('');
+    setCatalogSelectMode(false);
+    setSelectedCatalogIds(new Set());
+  }, [filteredCatalog, showToast]);
 
   // ─────────────────────────────────────────────────────────────────────────
   // Render
@@ -310,6 +359,8 @@ export default function App() {
               {showCatalog && (
                 <CatalogPanel
                   catalog={filteredCatalog}
+                  totalCount={catalog.length}
+                  loading={!catalogReady}
                   search={catalogSearch}
                   onSearch={setCatalogSearch}
                   selectMode={catalogSelectMode}
@@ -323,6 +374,8 @@ export default function App() {
                   }}
                   onToggleSelectMode={() => { setCatalogSelectMode((v) => !v); setSelectedCatalogIds(new Set()); }}
                   onAddSelected={addSelectedToQueue}
+                  onAddToQueue={handleAddCatalogItemToQueue}
+                  onAddAllMatching={handleAddAllMatchingToQueue}
                   onLoad={handleLoadFromCatalog}
                   onRemove={handleRemoveFromCatalog}
                   onClose={() => setShowCatalog(false)}
@@ -460,6 +513,8 @@ export default function App() {
                 {showCatalog && (
                   <CatalogPanel
                     catalog={filteredCatalog}
+                    totalCount={catalog.length}
+                    loading={!catalogReady}
                     search={catalogSearch}
                     onSearch={setCatalogSearch}
                     selectMode={catalogSelectMode}
@@ -473,6 +528,8 @@ export default function App() {
                     }}
                     onToggleSelectMode={() => { setCatalogSelectMode((v) => !v); setSelectedCatalogIds(new Set()); }}
                     onAddSelected={addSelectedToQueue}
+                    onAddToQueue={handleAddCatalogItemToQueueMobile}
+                    onAddAllMatching={handleAddAllMatchingToQueue}
                     onLoad={handleLoadFromCatalog}
                     onRemove={handleRemoveFromCatalog}
                     onClose={() => setShowCatalog(false)}
@@ -612,6 +669,8 @@ const tabAnim = {
 
 interface CatalogPanelProps {
   catalog: Product[];
+  totalCount: number;
+  loading?: boolean;
   search: string;
   onSearch: (s: string) => void;
   selectMode: boolean;
@@ -619,21 +678,58 @@ interface CatalogPanelProps {
   onToggleSelect: (id: string) => void;
   onToggleSelectMode: () => void;
   onAddSelected: () => void;
+  onAddToQueue: (p: Product) => void;
+  onAddAllMatching: () => void;
   onLoad: (p: Product) => void;
   onRemove: (id: string) => void;
   onClose: () => void;
 }
 
+const CATALOG_ROW_HEIGHT = 48;
+
 function CatalogPanel({
-  catalog, search, onSearch, selectMode, selected, onToggleSelect,
-  onToggleSelectMode, onAddSelected, onLoad, onRemove, onClose,
+  catalog, totalCount, loading = false, search, onSearch, selectMode, selected, onToggleSelect,
+  onToggleSelectMode, onAddSelected, onAddToQueue, onAddAllMatching, onLoad, onRemove, onClose,
 }: CatalogPanelProps) {
+  const listRef = useRef<HTMLDivElement>(null);
+  const [listHeight, setListHeight] = useState(320);
+  const [scrollTop, setScrollTop] = useState(0);
+
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+
+    const updateHeight = () => setListHeight(el.clientHeight);
+    updateHeight();
+
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  const { visibleItems, totalHeight, offsetY } = useMemo(() => {
+    const overscan = 4;
+    const start = Math.max(0, Math.floor(scrollTop / CATALOG_ROW_HEIGHT) - overscan);
+    const visibleCount = Math.ceil(listHeight / CATALOG_ROW_HEIGHT) + overscan * 2;
+    const end = Math.min(catalog.length, start + visibleCount);
+
+    return {
+      visibleItems: catalog.slice(start, end),
+      totalHeight: catalog.length * CATALOG_ROW_HEIGHT,
+      offsetY: start * CATALOG_ROW_HEIGHT,
+    };
+  }, [catalog, listHeight, scrollTop]);
+
   return (
     <div className="flex flex-col h-full min-w-0">
       <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-white/8 shrink-0">
         <div>
           <h3 className="text-white text-sm font-bold">Catalog</h3>
-          <p className="text-white/40 text-xs">{catalog.length} saved item{catalog.length !== 1 ? 's' : ''}</p>
+          <p className="text-white/40 text-xs">
+            {search.trim()
+              ? `${catalog.length} match${catalog.length === 1 ? '' : 'es'} · ${totalCount} saved`
+              : `${totalCount} saved item${totalCount === 1 ? '' : 's'}`}
+          </p>
         </div>
         <div className="flex items-center gap-1">
           {catalog.length > 0 && (
@@ -660,58 +756,93 @@ function CatalogPanel({
             type="text"
             value={search}
             onChange={(e) => onSearch(e.target.value)}
-            placeholder="Search catalog…"
+            placeholder="Search wines, liquors, regions…"
             className="w-full bg-white/5 border border-white/10 rounded-lg pl-9 pr-3 py-2 text-xs text-white placeholder:text-white/25 focus:outline-none focus:border-white/25 transition-colors"
           />
         </div>
+        {search.trim() && catalog.length > 0 && !selectMode && (
+          <button
+            type="button"
+            onClick={onAddAllMatching}
+            className="mt-2 w-full py-2 rounded-lg bg-[#D4AF37]/15 text-[#D4AF37] text-[11px] font-semibold hover:bg-[#D4AF37]/25 transition-colors"
+          >
+            Add all {catalog.length} match{catalog.length === 1 ? '' : 'es'} to Queue
+          </button>
+        )}
       </div>
 
       {/* List */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar px-2">
-        {catalog.length === 0 ? (
+      <div
+        ref={listRef}
+        className="flex-1 overflow-y-auto custom-scrollbar px-2"
+        onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)}
+      >
+        {loading ? (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-white/30 text-xs">Loading catalog…</p>
+          </div>
+        ) : catalog.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full gap-2 text-center px-4">
             <Wine className="w-8 h-8 text-white/15" />
-            <p className="text-white/30 text-xs">Your saved items will appear here</p>
+            <p className="text-white/30 text-xs">
+              {search.trim() ? 'No matching items' : 'Your saved items will appear here'}
+            </p>
           </div>
         ) : (
-          <div className="space-y-1 py-1">
-            {catalog.map((item) => {
-              const isSelected = selected.has(item.id);
-              return (
-                <div
-                  key={item.id}
-                  className={`group flex items-center gap-2 rounded-lg px-2 py-2.5 transition-colors ${
-                    isSelected ? 'bg-[#D4AF37]/10' : 'hover:bg-white/5'
-                  }`}
-                >
-                  {selectMode && (
-                    <button onClick={() => onToggleSelect(item.id)} className="shrink-0">
-                      {isSelected
-                        ? <CheckSquare className="w-4 h-4 text-[#D4AF37]" />
-                        : <Square className="w-4 h-4 text-white/30" />
-                      }
-                    </button>
-                  )}
-                  <button
-                    onClick={() => !selectMode && onLoad(item)}
-                    className="flex-1 text-left min-w-0"
+          <div className="relative py-1" style={{ height: totalHeight }}>
+            <div className="absolute inset-x-0 space-y-1" style={{ top: offsetY }}>
+              {visibleItems.map((item) => {
+                const isSelected = selected.has(item.id);
+                return (
+                  <div
+                    key={item.id}
+                    style={{ height: CATALOG_ROW_HEIGHT }}
+                    className={`group flex items-center gap-2 rounded-lg px-2 py-2.5 transition-colors ${
+                      isSelected ? 'bg-[#D4AF37]/10' : 'hover:bg-white/5'
+                    }`}
                   >
-                    <p className="text-white text-xs font-semibold truncate">{item.producer || 'Unnamed'}</p>
-                    <p className="text-white/40 text-[10px] truncate">
-                      {[item.name, item.vintage, item.region].filter(Boolean).join(' · ')}
-                    </p>
-                  </button>
-                  {!selectMode && (
+                    {selectMode && (
+                      <button onClick={() => onToggleSelect(item.id)} className="shrink-0">
+                        {isSelected
+                          ? <CheckSquare className="w-4 h-4 text-[#D4AF37]" />
+                          : <Square className="w-4 h-4 text-white/30" />
+                        }
+                      </button>
+                    )}
                     <button
-                      onClick={() => onRemove(item.id)}
-                      className="opacity-0 group-hover:opacity-100 w-6 h-6 flex items-center justify-center rounded text-white/30 hover:text-red-400 transition-all shrink-0"
+                      onClick={() => !selectMode && onLoad(item)}
+                      className="flex-1 text-left min-w-0"
+                      title="Load into editor"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <p className="text-white text-xs font-semibold truncate">{item.producer || 'Unnamed'}</p>
+                      <p className="text-white/40 text-[10px] truncate">
+                        {[item.name, item.vintage, item.region].filter(Boolean).join(' · ')}
+                      </p>
                     </button>
-                  )}
-                </div>
-              );
-            })}
+                    {!selectMode && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => onAddToQueue(item)}
+                          title="Add to print queue"
+                          className="w-7 h-7 flex items-center justify-center rounded-lg bg-[#D4AF37]/15 text-[#D4AF37] hover:bg-[#D4AF37]/30 transition-colors shrink-0"
+                        >
+                          <Plus className="w-3.5 h-3.5" strokeWidth={2.5} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onRemove(item.id)}
+                          title="Remove from catalog"
+                          className="opacity-0 group-hover:opacity-100 w-6 h-6 flex items-center justify-center rounded text-white/30 hover:text-red-400 transition-all shrink-0"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>

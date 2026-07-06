@@ -89,7 +89,15 @@ export default function FitText({
     let searchMax = maxFontSize;
     let searchMin = minFontSize;
 
-    if (fitMode === 'lines' && lineCount && lineCount > 0 && zoneHeightPercent) {
+    const contentHeight =
+      container.clientHeight - paddingY * 2 - (lineOffsetTop || 0);
+
+    if (fitMode === 'lines' && lineCount && lineCount > 0 && contentHeight > 0) {
+      resolvedLineHeightPx = contentHeight / lineCount;
+      const idealSize = fontSizeFromLineHeight(resolvedLineHeightPx);
+      searchMax = Math.min(maxFontSize, idealSize);
+      searchMin = minFontSize;
+    } else if (fitMode === 'lines' && lineCount && lineCount > 0 && zoneHeightPercent) {
       const ruled = ruledLineMetrics(zoneHeightPercent, lineCount, paddingY, lineOffsetTop);
       resolvedLineHeightPx = ruled.lineHeightPx;
       const idealSize = fontSizeFromLineHeight(ruled.lineHeightPx);
@@ -106,15 +114,14 @@ export default function FitText({
       (size) => applyStyles(inner, size, resolvedLineHeightPx || undefined)
     );
 
-    // If ruled lines still overflow at min size, shrink line height proportionally
+    // If ruled/container lines still overflow at min size, shrink line height proportionally
     if (
       fitMode === 'lines' &&
       lineCount &&
       resolvedLineHeightPx > 0 &&
-      !textFits(inner, container, false) &&
-      finalSize <= minFontSize + 0.5
+      !textFits(inner, container, false)
     ) {
-      const shrink = container.clientHeight / inner.scrollHeight;
+      const shrink = container.clientHeight / Math.max(inner.scrollHeight, 1);
       resolvedLineHeightPx = Math.max(resolvedLineHeightPx * shrink, minFontSize * 1.1);
       applyStyles(inner, minFontSize, resolvedLineHeightPx);
     }

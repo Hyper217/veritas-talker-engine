@@ -37,21 +37,26 @@ export default function BurgundyMarble({ product, config, bottleUrl, logoUrl, ta
       </div>
 
       {/* Main Body */}
-      <div className="flex-1 flex gap-4 p-4 min-h-0 relative z-10">
+      <div className="flex-1 flex gap-3 px-4 py-3 min-h-0 relative z-10">
         
-        {/* Left Column */}
-        <div className="flex-none w-[45%] flex flex-col">
+        {/* Left Column — bottle stays inside column bounds */}
+        <div className="flex-none w-[45%] flex flex-col min-h-0">
           {showBottle && (
-            <div className="flex-1 w-full bg-white shadow-sm p-2 flex items-end justify-center rounded-sm">
-              <img src={bottleUrl} alt="Bottle" className="w-full h-full object-contain object-bottom" crossOrigin={forPrint ? 'anonymous' : undefined} />
+            <div className="flex-1 min-h-0 w-full bg-white shadow-sm p-2 flex items-end justify-center rounded-sm overflow-hidden">
+              <img
+                src={bottleUrl}
+                alt="Bottle"
+                className="max-h-full max-w-full object-contain object-bottom"
+                crossOrigin={forPrint ? 'anonymous' : undefined}
+              />
             </div>
           )}
         </div>
 
-        {/* Right Column - Score & Notes */}
-        <div className="flex-1 flex flex-col min-w-0">
+        {/* Right Column — score + notes */}
+        <div className="flex-1 flex flex-col min-w-0 min-h-0">
           {showScore && (
-            <div className="flex-none mb-3 flex items-center gap-3 bg-[#fff] border-y border-r border-[#e8dcc8] rounded-r-full py-1 pr-4 pl-1 shadow-sm relative -left-4">
+            <div className="flex-none mb-2 flex items-center gap-3 bg-[#fff] border-y border-r border-[#e8dcc8] rounded-r-full py-1 pr-4 pl-1 shadow-sm relative -left-4">
               <div className="w-12 h-12 bg-[#6b1c32] rounded-full flex flex-col items-center justify-center shadow-md flex-none border-2 border-[#c9a94a]">
                 <FitText text={String(product.score)} maxFontSize={22} minFontSize={12} fontWeight={900} color="#f5e9c8" trackReady={forPrint} />
               </div>
@@ -62,14 +67,23 @@ export default function BurgundyMarble({ product, config, bottleUrl, logoUrl, ta
             </div>
           )}
           
-          <div className="flex-1 bg-white shadow-sm rounded-sm p-3 border-t-2 border-[#6b1c32]">
-            <FitText text={product.description} maxFontSize={11} minFontSize={5} fontStyle="italic" fitMode="lines" lineCount={11} textAlign="left" trackReady={forPrint} />
+          <div className="flex-1 min-h-0 h-0 bg-white shadow-sm rounded-sm p-3 border-t-2 border-[#6b1c32] overflow-hidden">
+            <FitText
+              text={product.description}
+              maxFontSize={11}
+              minFontSize={5}
+              fontStyle="italic"
+              fitMode="lines"
+              lineCount={showScore ? 7 : 9}
+              textAlign="left"
+              trackReady={forPrint}
+            />
           </div>
         </div>
       </div>
 
-      {/* Footer */}
-      <div className="flex-none h-[6%] px-4 pb-3 flex justify-between items-center mx-2 z-10">
+      {/* Footer — reserved strip so tags never sit under body content */}
+      <div className="flex-none shrink-0 px-4 py-2 flex justify-between items-center mx-2 z-20 bg-[#f0ede6]" style={{ minHeight: '9%' }}>
         <div className="flex-1">
           {tagText && (
             <FitText text={tagText} maxFontSize={8} minFontSize={5} fontFamily="sans" fontWeight={700} uppercase letterSpacing="0.1em" color={config.mutedColor} trackReady={forPrint} />

@@ -1,43 +1,126 @@
 /**
  * catalogStore.ts
- * Abstracted persistence layer — localStorage now, swap to API later with
- * a single import change. All reads/writes go through these functions.
+ * Persistence layer — catalog in IndexedDB (large capacity), settings/sessions in localStorage.
  */
 
 import type { Product, AppSettings, CatalogSession } from '../types';
+import {
+  idbDeleteProduct,
+  idbGetAllProducts,
+  idbPutProduct,
+  idbReplaceAllProducts,
+} from './idb';
 
 const KEYS = {
   catalog:  'veritas_catalog',
   sessions: 'veritas_sessions',
   settings: 'veritas_settings',
+  migrated: 'veritas_catalog_migrated_v1',
 } as const;
 
-// ─── Catalog ──────────────────────────────────────────────────────────────────
+export type CatalogSaveResult =
+  | { ok: true; catalog: Product[] }
+  | { ok: false; error: 'quota' | 'unavailable'; message: string };
 
-export function loadCatalog(): Product[] {
+function isQuotaError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === 'QuotaExceededError';
+}
+
+function saveFailure(error: unknown): CatalogSaveResult {
+  if (isQuotaError(error)) {
+    return {
+      ok: false,
+      error: 'quota',
+      message: 'Catalog storage is full. Remove items or use Dropbox links instead of uploaded images.',
+    };
+  }
+
+  return {
+    ok: false,
+    error: 'unavailable',
+    message: 'Could not save catalog. Check that this browser allows site storage.',
+  };
+}
+
+function loadLegacyCatalog(): Product[] {
   try {
     const raw = localStorage.getItem(KEYS.catalog);
-    return raw ? JSON.parse(raw) : [];
+    return raw ? (JSON.parse(raw) as Product[]) : [];
   } catch {
     return [];
   }
 }
 
-export function saveCatalog(catalog: Product[]): void {
-  localStorage.setItem(KEYS.catalog, JSON.stringify(catalog));
+async function migrateLegacyCatalogIfNeeded(): Promise<Product[]> {
+  if (localStorage.getItem(KEYS.migrated) === '1') return [];
+
+  const legacy = loadLegacyCatalog();
+  if (legacy.length === 0) {
+    localStorage.setItem(KEYS.migrated, '1');
+    return [];
+  }
+
+  await idbReplaceAllProducts(legacy);
+  localStorage.removeItem(KEYS.catalog);
+  localStorage.setItem(KEYS.migrated, '1');
+  return legacy;
 }
 
-export function addToCatalog(product: Product): Product[] {
-  const catalog = loadCatalog();
-  const updated = [...catalog, product];
-  saveCatalog(updated);
-  return updated;
+// ─── Catalog ──────────────────────────────────────────────────────────────────
+
+export async function loadCatalog(): Promise<Product[]> {
+  try {
+    const items = await idbGetAllProducts<Product>();
+    if (items.length > 0) return items;
+    return migrateLegacyCatalogIfNeeded();
+  } catch {
+    return loadLegacyCatalog();
+  }
 }
 
-export function removeFromCatalog(id: string): Product[] {
-  const updated = loadCatalog().filter((p) => p.id !== id);
-  saveCatalog(updated);
-  return updated;
+export async function saveCatalog(catalog: Product[]): Promise<CatalogSaveResult> {
+  try {
+    await idbReplaceAllProducts(catalog);
+    return { ok: true, catalog };
+  } catch (error) {
+    return saveFailure(error);
+  }
+}
+
+export async function addToCatalog(product: Product): Promise<CatalogSaveResult> {
+  try {
+    await idbPutProduct(product);
+    const catalog = await idbGetAllProducts<Product>();
+    return { ok: true, catalog };
+  } catch (error) {
+    return saveFailure(error);
+  }
+}
+
+export async function removeFromCatalog(id: string): Promise<CatalogSaveResult> {
+  try {
+    await idbDeleteProduct(id);
+    const catalog = await idbGetAllProducts<Product>();
+    return { ok: true, catalog };
+  } catch (error) {
+    return saveFailure(error);
+  }
+}
+
+export async function addManyToCatalog(products: Product[]): Promise<CatalogSaveResult> {
+  if (products.length === 0) {
+    const catalog = await loadCatalog();
+    return { ok: true, catalog };
+  }
+
+  try {
+    const existing = await idbGetAllProducts<Product>();
+    const merged = [...existing, ...products];
+    await idbReplaceAllProducts(merged);
+    return { ok: true, catalog: merged };
+  } catch (error) {
+    return saveFailure(error);
+  }
 }
 
 // ─── Sessions (print batches) ─────────────────────────────────────────────────

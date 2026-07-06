@@ -46,7 +46,8 @@ export default function QueuePanel({
               <Wine className="w-6 h-6 text-white/20" />
             </div>
             <p className="text-white/30 text-xs leading-relaxed">
-              Fill in the form and click<br /><strong className="text-white/50">Add to Queue</strong> to stage a talker for print
+              Search the <strong className="text-white/50">Catalog</strong> and tap <strong className="text-white/50">+</strong> to stage talkers,<br />
+              or fill in the form and click <strong className="text-white/50">Add to Queue</strong>
             </p>
           </div>
         ) : (
