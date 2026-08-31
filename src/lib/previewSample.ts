@@ -20,7 +20,9 @@ export const PREVIEW_PRODUCT: Product = {
   producer: 'Château Veritas',
   name: 'Reserve Cabernet',
   vintage: '2021',
+  price: '$48',
   region: 'Napa Valley, CA',
+  hook: 'Cedar, blackberry, and 40-year vines.',
   score: 94,
   reviewer: 'Wine Spectator',
   description:

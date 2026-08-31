@@ -79,9 +79,10 @@ export async function waitForElementReady(
       images.length === 0 ||
       images.every((img) => img.complete && (img.naturalHeight > 0 || img.src.startsWith('data:')));
 
-    const autosizeEl = container.querySelector('[data-autosize]');
+    const autosizeEls = Array.from(container.querySelectorAll('[data-autosize]'));
     const autosizeReady =
-      !autosizeEl || autosizeEl.getAttribute('data-autosize-ready') === 'true';
+      autosizeEls.length === 0 ||
+      autosizeEls.every((el) => el.getAttribute('data-autosize-ready') === 'true');
 
     if (imagesReady && autosizeReady) {
       await new Promise((r) => setTimeout(r, 150));

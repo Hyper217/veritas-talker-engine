@@ -28,6 +28,7 @@ export interface FitTextProps {
   paddingX?: number;
   paddingY?: number;
   lineOffsetTop?: number;
+  field?: string;
   /** Zone height as % — required for ruled-line mode */
   zoneHeightPercent?: number;
 }
@@ -54,6 +55,7 @@ export default function FitText({
   paddingY = 2,
   lineOffsetTop = 0,
   zoneHeightPercent,
+  field,
 }: FitTextProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
@@ -81,6 +83,7 @@ export default function FitText({
 
     if (!displayText.trim()) {
       setMetrics({ fontSize: maxFontSize, lineHeightPx: 0 });
+      container.removeAttribute('data-overflow');
       if (trackReady) container.setAttribute('data-autosize-ready', 'true');
       return;
     }
@@ -129,16 +132,20 @@ export default function FitText({
     setMetrics({ fontSize: finalSize, lineHeightPx: resolvedLineHeightPx });
 
     const fits = textFits(inner, container, isSingle);
+    const atMin = finalSize <= minFontSize + 0.3;
+    const warnOverflow =
+      !fits ||
+      (atMin && (field === 'name' || field === 'hook' || field === 'notes') && displayText.length > 8);
+
+    if (warnOverflow) {
+      container.setAttribute('data-overflow', 'true');
+    } else {
+      container.removeAttribute('data-overflow');
+    }
     if (trackReady) {
       container.setAttribute('data-autosize-ready', 'true');
-      if (fits) {
-        container.removeAttribute('data-overflow');
-      } else {
-        container.setAttribute('data-overflow', 'true');
-      }
     } else {
       container.removeAttribute('data-autosize-ready');
-      container.removeAttribute('data-overflow');
     }
   }, [
     text,
@@ -155,6 +162,7 @@ export default function FitText({
     uppercase,
     lineHeight,
     trackReady,
+    field,
     applyStyles,
   ]);
 
@@ -165,6 +173,7 @@ export default function FitText({
     <div
       ref={containerRef}
       data-autosize={trackReady ? true : undefined}
+      data-field={field}
       className={`h-full w-full overflow-hidden ${className}`}
       style={{
         padding: `${paddingY}px ${paddingX}px`,

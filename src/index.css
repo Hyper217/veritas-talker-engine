@@ -293,6 +293,13 @@ body {
 /* Prevent font-size flash during FitText calculation */
 .shelf-talker-content { will-change: font-size; }
 
+/* 5-foot read: identity stays sharp, pickup/footer recede */
+.talker-distance-pickup {
+  filter: blur(2px);
+  opacity: 0.38;
+  pointer-events: none;
+}
+
 /* ══════════════════════════════════════════════════════════════════════════════
    PRINT
 ══════════════════════════════════════════════════════════════════════════════ */

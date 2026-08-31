@@ -7,4 +7,5 @@ export interface TemplateProps {
   logoUrl: string;
   tagText: string;
   forPrint: boolean;
+  distancePreview?: boolean;
 }

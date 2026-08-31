@@ -17,9 +17,10 @@ interface Props {
   product: Product;
   settings?: AppSettings;
   forPrint?: boolean;
+  distancePreview?: boolean;
 }
 
-export default function ShelfTalker({ product, settings, forPrint = false }: Props) {
+export default function ShelfTalker({ product, settings, forPrint = false, distancePreview = false }: Props) {
   const templateId = settings?.templateId ?? 'art-deco';
   const config = getTemplate(templateId);
 
@@ -35,7 +36,7 @@ export default function ShelfTalker({ product, settings, forPrint = false }: Pro
     return url.startsWith('data:') || url.startsWith('blob:') ? url : formatDropboxUrl(url);
   }, [product.logoUrl, settings?.defaultLogoUrl]);
 
-  const tags = product.tags.length > 0 ? product.tags : (settings?.defaultTags ?? []);
+  const tags = product.tags?.length > 0 ? product.tags : (settings?.defaultTags ?? []);
   const tagText = tags.join(config.tagSeparator ?? ' · ');
 
   const props = {
@@ -45,6 +46,7 @@ export default function ShelfTalker({ product, settings, forPrint = false }: Pro
     logoUrl,
     tagText,
     forPrint,
+    distancePreview: distancePreview && !forPrint,
   };
 
   const renderTemplate = () => {

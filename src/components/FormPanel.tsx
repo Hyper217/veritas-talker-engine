@@ -13,13 +13,15 @@ import { useRef, useCallback } from 'react';
 import { motion } from 'motion/react';
 import {
   Wine, Star, Image, Tag, User, MapPin, Calendar,
-  ToggleLeft, ToggleRight, Upload, Link, X,
+  ToggleLeft, ToggleRight, Upload, Link, X, DollarSign, Quote, AlertTriangle,
 } from 'lucide-react';
 import type { Product } from '../types';
+import { HOOK_LIMIT, PRICE_LIMIT } from '../types';
 
 interface Props {
   product: Product;
   onChange: (updated: Product) => void;
+  textOverflow?: boolean;
 }
 
 // ─── Character counter ────────────────────────────────────────────────────────
@@ -192,7 +194,7 @@ function ImageUploader({
 
 // ─── Main form ────────────────────────────────────────────────────────────────
 
-export default function FormPanel({ product, onChange }: Props) {
+export default function FormPanel({ product, onChange, textOverflow = false }: Props) {
   const set = useCallback(
     <K extends keyof Product>(key: K, value: Product[K]) =>
       onChange({ ...product, [key]: value }),
@@ -206,6 +208,15 @@ export default function FormPanel({ product, onChange }: Props) {
 
   return (
     <div className="space-y-5 px-4 py-4 overflow-y-auto custom-scrollbar h-full">
+
+      {textOverflow && (
+        <div className="flex items-start gap-2 rounded-lg border border-amber-400/40 bg-amber-400/10 px-3 py-2">
+          <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+          <p className="text-[11px] text-amber-200/90 leading-relaxed">
+            Some copy is too long for this style. Shorten the wine name, hook, or tasting notes before printing.
+          </p>
+        </div>
+      )}
 
       {/* ── Toggles row ── */}
       <div className="flex flex-wrap gap-2">
@@ -228,17 +239,6 @@ export default function FormPanel({ product, onChange }: Props) {
           <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">Identity</span>
         </div>
 
-        <Field label="Producer / Brand" icon={<User className="w-3 h-3" />}
-          counter={<CharCount value={product.producer} limit={40} />}>
-          <input
-            type="text" maxLength={60}
-            value={product.producer}
-            onChange={(e) => set('producer', e.target.value)}
-            placeholder="e.g. Château Margaux"
-            className={inputCls}
-          />
-        </Field>
-
         <Field label="Item / Wine Name" icon={<Wine className="w-3 h-3" />}
           counter={<CharCount value={product.name} limit={60} />}>
           <input
@@ -246,6 +246,17 @@ export default function FormPanel({ product, onChange }: Props) {
             value={product.name}
             onChange={(e) => set('name', e.target.value)}
             placeholder="e.g. Grand Vin de Château Margaux"
+            className={inputCls}
+          />
+        </Field>
+
+        <Field label="Producer / Brand" icon={<User className="w-3 h-3" />}
+          counter={<CharCount value={product.producer} limit={40} />}>
+          <input
+            type="text" maxLength={60}
+            value={product.producer}
+            onChange={(e) => set('producer', e.target.value)}
+            placeholder="e.g. Château Margaux"
             className={inputCls}
           />
         </Field>
@@ -261,17 +272,46 @@ export default function FormPanel({ product, onChange }: Props) {
             />
           </Field>
 
-          <Field label="Region / Origin" icon={<MapPin className="w-3 h-3" />}
-            counter={<CharCount value={product.region} limit={50} />}>
+          <Field label="Price" icon={<DollarSign className="w-3 h-3" />}
+            counter={<CharCount value={product.price ?? ''} limit={PRICE_LIMIT} />}>
             <input
-              type="text" maxLength={70}
-              value={product.region}
-              onChange={(e) => set('region', e.target.value)}
-              placeholder="Bordeaux, France"
+              type="text" maxLength={PRICE_LIMIT}
+              value={product.price ?? ''}
+              onChange={(e) => set('price', e.target.value)}
+              placeholder="$24.99"
               className={inputCls}
             />
           </Field>
         </div>
+
+        <Field label="Region / Origin" icon={<MapPin className="w-3 h-3" />}
+          counter={<CharCount value={product.region} limit={50} />}>
+          <input
+            type="text" maxLength={70}
+            value={product.region}
+            onChange={(e) => set('region', e.target.value)}
+            placeholder="Bordeaux, France"
+            className={inputCls}
+          />
+        </Field>
+      </div>
+
+      {/* ── Section: Hook ── */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 pb-1 border-b border-white/8">
+          <Quote className="w-3.5 h-3.5 text-white/40" />
+          <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">Hook</span>
+          <CharCount value={product.hook ?? ''} limit={HOOK_LIMIT} />
+        </div>
+        <input
+          type="text"
+          maxLength={HOOK_LIMIT}
+          value={product.hook ?? ''}
+          onChange={(e) => set('hook', e.target.value)}
+          placeholder="Cedar, blackberry, 40-year vines"
+          className={inputCls}
+        />
+        <p className="text-white/30 text-[10px]">One line at arm’s length. Leave blank to hide.</p>
       </div>
 
       {/* ── Section: Description ── */}

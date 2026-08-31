@@ -14,7 +14,7 @@ import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Wine, Plus, Database, Settings as SettingsIcon, Palette,
-  Search, CheckSquare, Square, Trash2, X, Eye, FileText, List,
+  Search, CheckSquare, Square, Trash2, X, Eye, EyeOff, FileText, List,
 } from 'lucide-react';
 import type { Product, AppSettings, TemplateId } from './types';
 import ShelfTalker from './components/ShelfTalker';
@@ -31,6 +31,7 @@ import {
   loadSessions, saveSession,
 } from './lib/catalogStore';
 import { filterCatalog } from './lib/catalogSearch';
+import { normalizeProduct } from './lib/product';
 import { APP_VERSION } from './version';
 
 // ─── Initial state ────────────────────────────────────────────────────────────
@@ -41,7 +42,9 @@ function blankProduct(settings: AppSettings): Product {
     producer: '',
     name: '',
     vintage: new Date().getFullYear().toString(),
+    price: '',
     region: '',
+    hook: '',
     score: null,
     reviewer: '',
     description: '',
@@ -82,6 +85,8 @@ export default function App() {
   const [catalogSearch, setCatalogSearch] = useState('');
   const [catalogSelectMode, setCatalogSelectMode] = useState(false);
   const [selectedCatalogIds, setSelectedCatalogIds] = useState<Set<string>>(new Set());
+  const [distancePreview, setDistancePreview] = useState(false);
+  const [textOverflow, setTextOverflow] = useState(false);
 
   // ── Toasts ──
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -159,14 +164,14 @@ export default function App() {
   }, [settings]);
 
   const handleLoadFromCatalog = useCallback((item: Product) => {
-    setProduct({ ...item, id: crypto.randomUUID() });
+    setProduct({ ...normalizeProduct(item), id: crypto.randomUUID() });
     setShowCatalog(false);
     setMobileTab('form');
     showToast(`Loaded: ${item.producer || item.name}`);
   }, [showToast]);
 
   const handleLoadFromQueue = useCallback((item: Product) => {
-    setProduct({ ...item });
+    setProduct(normalizeProduct(item));
     setMobileTab('form');
   }, []);
 
@@ -396,7 +401,7 @@ export default function App() {
             </div>
           </div>
           <div className="flex-1 overflow-hidden">
-            <FormPanel product={product} onChange={setProduct} />
+            <FormPanel product={product} onChange={setProduct} textOverflow={textOverflow} />
           </div>
           <div className="vt-form-actions">
             <button onClick={handleSaveToCatalog} className="vt-btn-secondary">
@@ -414,22 +419,35 @@ export default function App() {
         <div className="vt-preview-panel">
           <div className="vt-panel-header">
             <h2 className="vt-panel-title">Preview</h2>
-            <button
-              onClick={() => {
-                setShowTemplates(true);
-                setShowCatalog(false);
-                setShowSettings(false);
-              }}
-              className="vt-btn-ghost text-xs gap-1.5"
-            >
-              <Palette className="w-3.5 h-3.5" />
-              Change Style
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setDistancePreview((v) => !v)}
+                className={`vt-btn-ghost text-xs gap-1.5 ${distancePreview ? 'text-[#D4AF37]' : ''}`}
+                title="Preview the 5-foot read — identity stays sharp, notes recede"
+              >
+                {distancePreview ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                5-ft read
+              </button>
+              <button
+                onClick={() => {
+                  setShowTemplates(true);
+                  setShowCatalog(false);
+                  setShowSettings(false);
+                }}
+                className="vt-btn-ghost text-xs gap-1.5"
+              >
+                <Palette className="w-3.5 h-3.5" />
+                Change Style
+              </button>
+            </div>
           </div>
           <div className="flex-1 flex items-center justify-center p-4 overflow-hidden">
-            <div className="w-full max-w-xs">
-              <ShelfTalker product={product} settings={settings} />
-            </div>
+            <LivePreview
+              product={product}
+              settings={settings}
+              distancePreview={distancePreview}
+              onOverflow={setTextOverflow}
+            />
           </div>
         </div>
 
@@ -542,7 +560,7 @@ export default function App() {
           <AnimatePresence mode="wait">
             {mobileTab === 'form' && (
               <motion.div key="tab-form" {...tabAnim} className="vt-mobile-tab-content">
-                <FormPanel product={product} onChange={setProduct} />
+                <FormPanel product={product} onChange={setProduct} textOverflow={textOverflow} />
                 <div className="vt-form-actions px-4 pb-4">
                   <button onClick={handleSaveToCatalog} className="vt-btn-secondary">
                     <Database className="w-3.5 h-3.5" />
@@ -558,9 +576,21 @@ export default function App() {
 
             {mobileTab === 'preview' && (
               <motion.div key="tab-preview" {...tabAnim} className="vt-mobile-tab-content items-center justify-center p-4">
-                <div className="w-full max-w-xs">
-                  <ShelfTalker product={product} settings={settings} />
+                <div className="w-full flex justify-end mb-2">
+                  <button
+                    onClick={() => setDistancePreview((v) => !v)}
+                    className={`vt-btn-ghost text-xs gap-1.5 ${distancePreview ? 'text-[#D4AF37]' : ''}`}
+                  >
+                    {distancePreview ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    5-ft read
+                  </button>
                 </div>
+                <LivePreview
+                  product={product}
+                  settings={settings}
+                  distancePreview={distancePreview}
+                  onOverflow={setTextOverflow}
+                />
               </motion.div>
             )}
 
@@ -603,6 +633,47 @@ export default function App() {
 
       {/* ── Toasts ── */}
       <Toast toasts={toasts} onDismiss={dismissToast} />
+    </div>
+  );
+}
+
+// ─── Live preview (overflow watch) ────────────────────────────────────────────
+
+function LivePreview({
+  product,
+  settings,
+  distancePreview,
+  onOverflow,
+}: {
+  product: Product;
+  settings: AppSettings;
+  distancePreview: boolean;
+  onOverflow: (overflow: boolean) => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const root = ref.current;
+    if (!root) return;
+
+    const check = () => {
+      if (root.clientHeight < 50) return;
+      onOverflow(!!root.querySelector('[data-overflow="true"]'));
+    };
+
+    check();
+    const observer = new MutationObserver(check);
+    observer.observe(root, { attributes: true, subtree: true, attributeFilter: ['data-overflow'] });
+    const timer = window.setTimeout(check, 160);
+    return () => {
+      observer.disconnect();
+      window.clearTimeout(timer);
+    };
+  }, [product, settings.templateId, distancePreview, onOverflow]);
+
+  return (
+    <div ref={ref} className="w-full max-w-xs">
+      <ShelfTalker product={product} settings={settings} distancePreview={distancePreview} />
     </div>
   );
 }

@@ -10,6 +10,7 @@ import {
   idbPutProduct,
   idbReplaceAllProducts,
 } from './idb';
+import { normalizeProduct } from './product';
 
 const KEYS = {
   catalog:  'veritas_catalog',
@@ -71,10 +72,10 @@ async function migrateLegacyCatalogIfNeeded(): Promise<Product[]> {
 export async function loadCatalog(): Promise<Product[]> {
   try {
     const items = await idbGetAllProducts<Product>();
-    if (items.length > 0) return items;
-    return migrateLegacyCatalogIfNeeded();
+    const source = items.length > 0 ? items : await migrateLegacyCatalogIfNeeded();
+    return source.map(normalizeProduct);
   } catch {
-    return loadLegacyCatalog();
+    return loadLegacyCatalog().map(normalizeProduct);
   }
 }
 
