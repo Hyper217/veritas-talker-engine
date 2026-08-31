@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,700;0,900;1,700;1,900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:ital,wght@0,600;0,700;1,400;1,600&family=Inter:wght@400;500;600;700&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Playfair+Display:ital,wght@0,700;0,900;1,700;1,900&display=swap');
 @import "tailwindcss";
 
 /* ── Design tokens ─────────────────────────────────────────────────────────── */
@@ -6,6 +6,9 @@
 @theme {
   --font-sans:  "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-serif: "Playfair Display", ui-serif, Georgia, serif;
+  --font-cinzel: Cinzel, ui-serif, Georgia, serif;
+  --font-cormorant: "Cormorant Garamond", ui-serif, Georgia, serif;
+  --font-libre: "Libre Baskerville", ui-serif, Georgia, serif;
 
   /* App chrome */
   --color-app-bg:      #0d0d0d;

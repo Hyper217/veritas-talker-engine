@@ -4,6 +4,7 @@
  */
 
 import type { Product, AppSettings, CatalogSession } from '../types';
+import { isTemplateId } from './templates';
 import {
   idbDeleteProduct,
   idbGetAllProducts,
@@ -153,7 +154,7 @@ export function deleteSession(id: string): CatalogSession[] {
 const DEFAULT_SETTINGS: AppSettings = {
   defaultLogoUrl: '',
   defaultTags: ['ORGANIC', 'UNFILTERED', 'NATIVE FERMENTS'],
-  templateId: 'art-deco',
+  templateId: 'noir',
 };
 
 export function loadSettings(): AppSettings {
@@ -164,7 +165,7 @@ export function loadSettings(): AppSettings {
     return {
       defaultLogoUrl: parsed.defaultLogoUrl ?? DEFAULT_SETTINGS.defaultLogoUrl,
       defaultTags:    parsed.defaultTags    ?? DEFAULT_SETTINGS.defaultTags,
-      templateId:     parsed.templateId     ?? DEFAULT_SETTINGS.templateId,
+      templateId:     isTemplateId(parsed.templateId) ? parsed.templateId : DEFAULT_SETTINGS.templateId,
     };
   } catch {
     return DEFAULT_SETTINGS;

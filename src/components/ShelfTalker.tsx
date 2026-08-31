@@ -3,6 +3,10 @@ import type { Product, AppSettings } from '../types';
 import { getTemplate } from '../lib/templates';
 import { formatDropboxUrl } from '../lib/utils';
 import {
+  Noir,
+  Ivory,
+  Cellar,
+  Copper,
   CleanMinimal,
   MinimalEditorial,
   BurgundyHeritage,
@@ -21,7 +25,7 @@ interface Props {
 }
 
 export default function ShelfTalker({ product, settings, forPrint = false, distancePreview = false }: Props) {
-  const templateId = settings?.templateId ?? 'art-deco';
+  const templateId = settings?.templateId ?? 'noir';
   const config = getTemplate(templateId);
 
   const bottleUrl = useMemo(() => {
@@ -51,6 +55,10 @@ export default function ShelfTalker({ product, settings, forPrint = false, dista
 
   const renderTemplate = () => {
     switch (templateId) {
+      case 'noir':              return <Noir {...props} />;
+      case 'ivory':             return <Ivory {...props} />;
+      case 'cellar':            return <Cellar {...props} />;
+      case 'copper':            return <Copper {...props} />;
       case 'clean-minimal':     return <CleanMinimal {...props} />;
       case 'minimal-editorial': return <MinimalEditorial {...props} />;
       case 'burgundy-heritage': return <BurgundyHeritage {...props} />;
@@ -59,7 +67,7 @@ export default function ShelfTalker({ product, settings, forPrint = false, dista
       case 'autumn-harvest':    return <AutumnHarvest {...props} />;
       case 'rustic-kraft':      return <FestiveWinter {...props} />;
       case 'art-deco':          return <ArtDeco {...props} />;
-      default:                  return <ArtDeco {...props} />;
+      default:                  return <Noir {...props} />;
     }
   };
 

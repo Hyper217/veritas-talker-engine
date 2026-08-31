@@ -21,6 +21,8 @@ export interface TalkerChrome {
   logoClassName?: string;
   nameFontStyle?: 'normal' | 'italic';
   notesFontStyle?: 'normal' | 'italic';
+  nameFontFamily?: 'serif' | 'sans' | 'cinzel' | 'cormorant' | 'libre';
+  producerFontFamily?: 'serif' | 'sans' | 'cinzel' | 'cormorant' | 'libre';
   producerLetterSpacing?: string;
   colors: {
     name: string;
@@ -79,6 +81,7 @@ export default function TalkerShell({
             minFontSize={TYPE_SCALE.name.min}
             fontWeight={700}
             fontStyle={chrome.nameFontStyle ?? 'normal'}
+            fontFamily={chrome.nameFontFamily ?? 'serif'}
             color={chrome.colors.name}
             textAlign="center"
             fitMode="box"
@@ -95,6 +98,7 @@ export default function TalkerShell({
               maxFontSize={TYPE_SCALE.producer.max}
               minFontSize={TYPE_SCALE.producer.min}
               fontWeight={600}
+              fontFamily={chrome.producerFontFamily ?? 'serif'}
               uppercase
               letterSpacing={chrome.producerLetterSpacing ?? '0.12em'}
               color={chrome.colors.producer}

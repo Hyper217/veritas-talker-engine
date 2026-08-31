@@ -37,5 +37,5 @@ export const PREVIEW_PRODUCT: Product = {
 export const PREVIEW_SETTINGS: AppSettings = {
   defaultLogoUrl: '',
   defaultTags: ['Organic', 'Limited Release'],
-  templateId: 'art-deco',
+  templateId: 'noir',
 };

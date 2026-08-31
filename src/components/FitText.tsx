@@ -13,7 +13,7 @@ export interface FitTextProps {
   className?: string;
   maxFontSize?: number;
   minFontSize?: number;
-  fontFamily?: 'serif' | 'sans';
+  fontFamily?: 'serif' | 'sans' | 'cinzel' | 'cormorant' | 'libre';
   fontWeight?: number;
   fontStyle?: 'normal' | 'italic';
   textAlign?: 'left' | 'center' | 'right';
@@ -166,7 +166,12 @@ export default function FitText({
     applyStyles,
   ]);
 
-  const fontClass = fontFamily === 'serif' ? 'font-serif' : 'font-sans';
+  const fontClass =
+    fontFamily === 'sans' ? 'font-sans'
+    : fontFamily === 'cinzel' ? 'font-cinzel'
+    : fontFamily === 'cormorant' ? 'font-cormorant'
+    : fontFamily === 'libre' ? 'font-libre'
+    : 'font-serif';
   const isSingle = singleLine || fitMode === 'single';
 
   return (

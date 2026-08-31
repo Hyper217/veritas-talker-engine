@@ -24,6 +24,10 @@ export const PRICE_LIMIT = 16;
 // ─── Templates ────────────────────────────────────────────────────────────────
 
 export type TemplateId =
+  | 'noir'
+  | 'ivory'
+  | 'cellar'
+  | 'copper'
   | 'clean-minimal'
   | 'minimal-editorial'
   | 'burgundy-heritage'
