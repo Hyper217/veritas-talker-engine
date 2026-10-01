@@ -22,9 +22,10 @@ import FormPanel from './components/FormPanel';
 import QueuePanel from './components/QueuePanel';
 import { TemplatePicker } from './components/TemplateGallery';
 import SettingsPanel from './components/SettingsPanel';
+import PdfPreviewModal from './components/PdfPreviewModal';
 import Toast, { ToastMessage } from './components/Toast';
 import { getTalkerDimensions } from './lib/talkerDimensions';
-import { buildPdfFromCanvases, captureTalkerElement, waitForElementReady } from './lib/pdf';
+import { buildPdfFromCanvases, captureTalkerElement, renderSheetPreviews, waitForElementReady } from './lib/pdf';
 import {
   loadSettings, saveSettings,
   loadCatalog, addToCatalog, removeFromCatalog,
@@ -76,6 +77,13 @@ export default function App() {
   const [queue, setQueue]           = useState<Product[]>([]);
   const [printItem, setPrintItem]   = useState<Product | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [pdfPreview, setPdfPreview] = useState<{
+    url: string;
+    filename: string;
+    count: number;
+    pages: string[];
+  } | null>(null);
+  const pdfUrlRef = useRef<string | null>(null);
 
   // ── UI state ──
   const [showTemplates, setShowTemplates] = useState(false);
@@ -204,8 +212,15 @@ export default function App() {
       requestAnimationFrame(() => { requestAnimationFrame(() => { resolve(); }); });
     });
 
-  const handleGeneratePdf = useCallback(async () => {
-    if (queue.length === 0) return;
+  const closePdfPreview = useCallback(() => {
+    const url = pdfUrlRef.current;
+    pdfUrlRef.current = null;
+    setPdfPreview(null);
+    if (url) window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }, []);
+
+  const handlePreviewPdf = useCallback(async () => {
+    if (queue.length === 0 || isGenerating) return;
     setIsGenerating(true);
     try {
       const dims = getTalkerDimensions(settings.templateId as any);
@@ -228,15 +243,20 @@ export default function App() {
         return;
       }
 
-      const pdf  = buildPdfFromCanvases(canvases, settings.templateId as any);
+      const pdf = buildPdfFromCanvases(canvases, settings.templateId as any);
       const date = new Date().toISOString().slice(0, 10);
-      pdf.save(`shelf-talkers-${date}.pdf`);
-      showToast(`PDF ready — ${queue.length} talker${queue.length === 1 ? '' : 's'}`);
+      const url = URL.createObjectURL(pdf.output('blob'));
+      if (pdfUrlRef.current) URL.revokeObjectURL(pdfUrlRef.current);
+      pdfUrlRef.current = url;
+      setPdfPreview({
+        url,
+        filename: `shelf-talkers-${date}.pdf`,
+        count: canvases.length,
+        pages: renderSheetPreviews(canvases, settings.templateId),
+      });
 
-      // Auto-save session
       const session = { id: crypto.randomUUID(), name: `Batch ${sessions.length + 1} — ${date}`, items: [...queue] };
-      const updated = saveSession(session);
-      setSessions(updated);
+      setSessions(saveSession(session));
     } catch (err) {
       console.error(err);
       showToast('PDF generation failed', 'error');
@@ -244,7 +264,7 @@ export default function App() {
       setPrintItem(null);
       setIsGenerating(false);
     }
-  }, [queue, settings, sessions, showToast]);
+  }, [queue, settings, sessions, showToast, isGenerating]);
 
   // ── Filtered catalog ──
   const filteredCatalog = useMemo(
@@ -458,7 +478,7 @@ export default function App() {
             onReorder={setQueue}
             onRemove={handleRemoveFromQueue}
             onLoadItem={handleLoadFromQueue}
-            onGeneratePdf={handleGeneratePdf}
+            onPreviewPdf={handlePreviewPdf}
             isGenerating={isGenerating}
           />
         </div>
@@ -601,7 +621,7 @@ export default function App() {
                   onReorder={setQueue}
                   onRemove={handleRemoveFromQueue}
                   onLoadItem={handleLoadFromQueue}
-                  onGeneratePdf={handleGeneratePdf}
+                  onPreviewPdf={handlePreviewPdf}
                   isGenerating={isGenerating}
                 />
               </motion.div>
@@ -630,6 +650,16 @@ export default function App() {
           />
         </nav>
       </div>
+
+      {pdfPreview && (
+        <PdfPreviewModal
+          url={pdfPreview.url}
+          filename={pdfPreview.filename}
+          talkerCount={pdfPreview.count}
+          pages={pdfPreview.pages}
+          onClose={closePdfPreview}
+        />
+      )}
 
       {/* ── Toasts ── */}
       <Toast toasts={toasts} onDismiss={dismissToast} />

@@ -4,7 +4,7 @@
  */
 
 import { motion, AnimatePresence, Reorder } from 'motion/react';
-import { Printer, Trash2, GripVertical, Wine } from 'lucide-react';
+import { Eye, Trash2, GripVertical, Wine } from 'lucide-react';
 import type { Product } from '../types';
 
 interface Props {
@@ -12,12 +12,12 @@ interface Props {
   onReorder: (queue: Product[]) => void;
   onRemove: (id: string) => void;
   onLoadItem: (product: Product) => void;
-  onGeneratePdf: () => void;
+  onPreviewPdf: () => void;
   isGenerating: boolean;
 }
 
 export default function QueuePanel({
-  queue, onReorder, onRemove, onLoadItem, onGeneratePdf, isGenerating,
+  queue, onReorder, onRemove, onLoadItem, onPreviewPdf, isGenerating,
 }: Props) {
   return (
     <div className="flex flex-col h-full">
@@ -99,12 +99,12 @@ export default function QueuePanel({
         )}
       </div>
 
-      {/* Print button */}
-      <div className="p-3 border-t border-white/8">
+      {/* Preview & print */}
+      <div className="p-3 border-t border-white/8 space-y-2">
         <motion.button
           whileHover={queue.length > 0 ? { scale: 1.02 } : {}}
           whileTap={queue.length > 0 ? { scale: 0.98 } : {}}
-          onClick={onGeneratePdf}
+          onClick={onPreviewPdf}
           disabled={queue.length === 0 || isGenerating}
           className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all ${
             queue.length === 0
@@ -117,16 +117,19 @@ export default function QueuePanel({
           {isGenerating ? (
             <>
               <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
-              Generating PDF…
+              Building preview…
             </>
           ) : (
             <>
-              <Printer className="w-4 h-4" />
-              Export PDF
+              <Eye className="w-4 h-4" />
+              Preview &amp; Print
               {queue.length > 0 && ` (${queue.length})`}
             </>
           )}
         </motion.button>
+        <p className="text-white/30 text-[10px] leading-snug text-center">
+          Letter preview, then the print dialog. Open the system dialog to use the SHELF TALKERS profile.
+        </p>
       </div>
     </div>
   );

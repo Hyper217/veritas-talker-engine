@@ -153,6 +153,49 @@ export function buildPdfFromCanvases(
   return pdf;
 }
 
+const LETTER_WIDTH_MM = 215.9;
+const LETTER_HEIGHT_MM = 279.4;
+
+/** Letter sheets as images, using the same placement as the PDF. */
+export function renderSheetPreviews(
+  canvases: HTMLCanvasElement[],
+  layout: TemplateId | string
+): string[] {
+  const pxPerMm = 4;
+  const { widthMm, heightMm } = getTalkerDimensions(layout);
+  const positions = getGridPositions(layout);
+  const pageCount = Math.max(1, Math.ceil(canvases.length / 4));
+  const pages: string[] = [];
+
+  for (let page = 0; page < pageCount; page++) {
+    const sheet = document.createElement('canvas');
+    sheet.width = Math.round(LETTER_WIDTH_MM * pxPerMm);
+    sheet.height = Math.round(LETTER_HEIGHT_MM * pxPerMm);
+    const ctx = sheet.getContext('2d');
+    if (!ctx) continue;
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, sheet.width, sheet.height);
+
+    for (let slot = 0; slot < 4; slot++) {
+      const canvas = canvases[page * 4 + slot];
+      if (!canvas) break;
+      const { x, y } = positions[slot];
+      ctx.drawImage(
+        canvas,
+        x * pxPerMm,
+        y * pxPerMm,
+        widthMm * pxPerMm,
+        heightMm * pxPerMm
+      );
+    }
+
+    pages.push(sheet.toDataURL('image/png'));
+  }
+
+  return pages;
+}
+
 export function getPageCount(itemCount: number): number {
   return Math.max(1, Math.ceil(itemCount / 4));
 }
